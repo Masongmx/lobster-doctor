@@ -1,7 +1,7 @@
 {
   "slug": "lobster-doctor",
   "name": "Lobster Doctor",
-  "description": "OpenClaw workspace health management: checkup, cleanup, skill slimming, cron audit, token diagnosis.",
+  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。体检诊断+安全清理+技能瘦身+cron巡检。说句话就能用。",
   "version": "1.2.0",
   "author": "Masongmx",
   "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving"],
