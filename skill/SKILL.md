@@ -1,61 +1,66 @@
 ---
 name: lobster-doctor
 description: >
-  🦞 龙虾医生 — workspace 健康管理。体检+清理+cron巡检，解决 OpenClaw 长期使用后的文件膨胀问题。
-  Activate when user mentions: 体检, 清理, 清理workspace, workspace健康, 龙虾医生,
-  lobster doctor, workspace cleanup, 垃圾文件, 废弃文件, 僵尸任务, cron巡检,
-  检查workspace, workspace太大了, token变贵了, 清理一下, 做个体检, 整理workspace。
+  🦞 龙虾医生 — OpenClaw workspace 健康管理。体检+清理+技能瘦身+cron巡检。
+  Activate when user mentions: 体检, 清理, workspace健康, 龙虾医生, lobster doctor,
+  workspace cleanup, 垃圾文件, 废弃文件, 僵尸任务, cron巡检, token太贵, 技能太多,
+  skill-slim, 技能瘦身, 清理一下, 做个体检, 整理workspace。
 ---
 
 # 🦞 Lobster Doctor
 
-诊断 + 治疗 + 预防：让你的龙虾保持健康。
+OpenClaw workspace 全生命周期健康管理：体检诊断 → 垃圾清理 → 技能瘦身 → 定期巡检。
 
 ## 自动行为（无需用户操作）
 
-龙虾会根据用户意图自动调用相应功能。用户只需要**用自然语言描述需求**，龙虾会自动判断并执行。
+龙虾根据用户意图自动调用。用户只需**自然语言描述需求**。
 
-**当用户要求体检/检查时**，龙虾自动执行：
+### 体检
 ```bash
 python3 skills/lobster-doctor/scripts/lobster_doctor.py check
 ```
 
-**当用户要求清理时**，龙虾**必须先执行模拟清理**，把结果展示给用户确认，得到用户同意后再执行实际清理：
+### 清理（必须先 dry-run 再确认）
 ```bash
-# 第一步：模拟清理（展示会删除什么）
-python3 skills/lobster-doctor/scripts/lobster_doctor.py cleanup --dry-run
-
-# 第二步：用户确认后，实际清理
-python3 skills/lobster-doctor/scripts/lobster_doctor.py cleanup
+python3 skills/lobster-doctor/scripts/lobster_doctor.py cleanup --dry-run  # 预览
+python3 skills/lobster-doctor/scripts/lobster_doctor.py cleanup           # 执行
 ```
 
-**当用户要求检查 cron 任务时**：
+### cron 巡检
 ```bash
 python3 skills/lobster-doctor/scripts/lobster_doctor.py cron-audit
 ```
 
-**当用户要求查看文件统计时**：
+### 文件统计
 ```bash
 python3 skills/lobster-doctor/scripts/lobster_doctor.py stats
 ```
 
-**当用户要求设置定期体检时**：
+### 技能瘦身
 ```bash
-openclaw cron add --name "lobster-doctor-weekly" --cron "0 9 * * 1" --payload '{"kind":"systemEvent","text":"运行龙虾医生体检：执行 lobster_doctor.py check，将结果通知用户。"}' --session-target isolated
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim report    # 报告
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim dry-run   # 预览
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim apply     # 执行
+```
+
+### 设置每周自动体检
+```bash
+openclaw cron add --name "lobster-doctor-weekly" --cron "0 9 * * 1" \
+  --payload '{"kind":"systemEvent","text":"运行龙虾医生体检：执行 lobster_doctor.py check，将结果通知用户。"}' \
+  --session-target isolated
 ```
 
 ## 用户意图识别
 
-| 用户可能说的话 | 龙虾应该执行 |
-|--------------|-------------|
+| 用户可能说的话 | 龙虾执行 |
+|--------------|---------|
 | "给我的龙虾做个体检" | `check` |
 | "检查一下 workspace 健康" | `check` |
-| "龙虾是不是变慢了" | `check` |
 | "帮我清理一下 workspace" | 先 `cleanup --dry-run`，确认后 `cleanup` |
-| "清理垃圾文件" | 先 `cleanup --dry-run`，确认后 `cleanup` |
-| "整理一下 workspace" | 先 `cleanup --dry-run`，确认后 `cleanup` |
 | "检查有没有僵尸任务" | `cron-audit` |
-| "看看 workspace 文件分布" | `stats` |
+| "看看文件分布" | `stats` |
+| "技能太多了/token太贵" | `skill-slim report` |
+| "精简技能描述" | `skill-slim dry-run` → 确认 → `skill-slim apply` |
 | "设置每周自动体检" | 创建 cron 定时任务 |
 
 ## 功能说明
@@ -71,27 +76,47 @@ openclaw cron add --name "lobster-doctor-weekly" --cron "0 9 * * 1" --payload '{
 - bootstrap context token 估算
 
 ### cleanup（清理）
-安全自动清理垃圾文件。四重安全保障：
-- ✅ 核心文件白名单永不删除（SOUL.md, MEMORY.md 等）
-- ✅ skills/ node_modules/ memory/ memory-tree/ 不碰
-- ✅ 清理前自动备份到 `.cleanup-backup/YYYY-MM-DD/`
-- ✅ 支持 `--dry-run` 模拟清理
+安全自动清理。四重保障：
+- ✅ 核心文件白名单（SOUL.md, MEMORY.md 等）
+- ✅ skills/ node_modules/ memory/ 不碰
+- ✅ 自动备份到 `.cleanup-backup/YYYY-MM-DD/`
+- ✅ `--dry-run` 模拟清理
 
-**⚠️ 重要：执行 cleanup 前必须先运行 --dry-run 让用户确认！**
+**⚠️ cleanup 前必须先 --dry-run 让用户确认！**
 
 ### cron-audit（cron 巡检）
-检测 cron 僵尸任务：
-- 已禁用但仍存在的任务
-- 名称含 test/debug/tmp 的临时任务
-- 长期未运行的任务
+检测僵尸 cron 任务：已禁用、临时任务、长期未运行。
 
 ### stats（统计）
-workspace 文件分布概览：
-- 按类型分布
-- 按目录大小排行
-- 已安装技能数量和大小
+workspace 文件分布：按类型、按目录大小、已安装技能数量。
+
+### skill-slim（技能瘦身）⭐ 新功能
+**问题**：每个技能的 description 都注入系统提示，136个技能 = 每轮 ~11K tokens 白烧。
+
+**原理**：OpenClaw 加载流程是 `description 判断 → read SKILL.md → 执行`，description 只是"门牌号"不是"说明书"。精简 description 不影响调用准确性。
+
+**精简策略**：
+1. 保留核心功能句（一句话说清干什么）
+2. 保留触发关键词（Activate when / Triggers）
+3. 保留排除条件（NOT for，限制100字符内）
+4. 删除冗长解释、Use when 列表、示例
+5. 每条硬上限 150 字符
+6. 龙虾医生自身不精简（白名单保护）
+
+**安全机制**：
+- `report` / `dry-run` 不修改任何文件
+- `apply` 自动备份原 SKILL.md 到 `.cleanup-backup/skill-slim/`
+- 随时可从备份恢复
+
+**实测效果**（2026-03-20）：
+| 指标 | 原始 | 精简后 |
+|------|------|--------|
+| Description 总字符 | 22,387 | 9,919 |
+| 纯 description tokens | ~5,596 | ~2,479 |
+| 含 XML 标签 tokens | ~10,312 | ~7,195 |
+| **每轮节省** | — | **~3,200 tokens** |
 
 ## 依赖
 
-- Python 3.8+（不需要 pip 安装任何包）
+- Python 3.8+（零外部包）
 - 零 API 调用

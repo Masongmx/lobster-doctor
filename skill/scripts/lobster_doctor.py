@@ -573,6 +573,9 @@ def main():
         print("  cleanup --dry-run  模拟清理（只报告不删除）")
         print("  cron-audit         巡检：检测 cron 僵尸任务")
         print("  stats              统计：workspace 文件分布概览")
+        print("  skill-slim report  技能瘦身：token 消耗报告（不修改）")
+        print("  skill-slim dry-run 技能瘦身：预览精简效果（不修改）")
+        print("  skill-slim apply   技能瘦身：应用精简（自动备份）")
         print()
         print("建议: 每周运行一次 check，每月运行一次 cleanup")
         return
@@ -587,6 +590,11 @@ def main():
         cmd_cron_audit()
     elif cmd == "stats":
         cmd_stats()
+    elif cmd == "skill-slim":
+        # 委托给 skill_slim.py
+        from skill_slim import main as skill_slim_main
+        sys.argv = [sys.argv[0], *sys.argv[2:]]  # 去掉 skill-slim
+        skill_slim_main()
     else:
         print(f"❌ 未知命令: {cmd}")
         print("运行 `lobster_doctor.py` 查看可用命令")

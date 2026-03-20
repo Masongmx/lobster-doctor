@@ -1,16 +1,16 @@
 ---
 name: lobster-doctor
-version: 1.0.0
+version: 1.1.0
 description: |
-  🦞 龙虾医生 — workspace 健康管理。体检+清理+cron巡检，解决 OpenClaw 长期使用后的文件膨胀问题。零依赖、零API调用、清理前自动备份。
-tags: [maintenance, cleanup, workspace, health, automation]
+  🦞 龙虾医生 — OpenClaw workspace 全生命周期健康管理。体检+清理+技能瘦身+cron巡检。零依赖、零API调用。
+tags: [maintenance, cleanup, workspace, health, automation, optimization, token-saving]
 ---
 
 # 🦞 Lobster Doctor — 龙虾医生
 
-> **你的龙虾用久了越来越慢？workspace 塞满了废弃文件？cron 僵尸任务偷偷在跑？token 越花越多？**
+> **你的龙虾用久了越来越慢？workspace 塞满了废弃文件？技能装了136个 description 占了 11000 tokens？token 越花越多？**
 >
-> 龙虾医生一键诊断，安全清理，定期巡检。让龙虾保持健康。
+> 龙虾医生 v1.1：体检、清理、**技能瘦身**、cron 巡检，让你的龙虾保持健康和精简。
 
 ## 💡 为什么需要这个？
 
@@ -79,7 +79,34 @@ python3 skills/lobster-doctor/scripts/lobster_doctor.py cleanup
 - ✅ 清理前自动备份到 `.cleanup-backup/YYYY-MM-DD/`
 - ✅ 支持 `--dry-run` 模拟模式
 
-### 3️⃣ cron-audit — Cron 巡检
+### 3️⃣ skill-slim — 技能瘦身 ⭐ v1.1 新功能
+
+```bash
+# 查看token消耗报告
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim report
+
+# 预览精简效果
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim dry-run
+
+# 执行精简（自动备份）
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim apply
+```
+
+**问题：** 136个技能的description注入系统提示，每轮消耗 ~11,000 tokens。
+
+**原理：** OpenClaw加载流程是 `description判断 → read SKILL.md → 执行`，description只是"门牌号"不需要说明书。
+
+**精简策略：** 保留核心功能句 + 触发关键词 + 排除条件，删除冗余解释，硬限150字符。
+
+**实测效果（136个技能）：**
+
+| 指标 | 精简前 | 精简后 |
+|------|--------|--------|
+| Description总字符 | 22,387 | 9,919 |
+| 每轮tokens | ~5,600 | ~2,500 |
+| **节省** | — | **~3,100 tokens/轮** |
+
+### 4️⃣ cron-audit — Cron 巡检
 
 ```bash
 python3 skills/lobster-doctor/scripts/lobster_doctor.py cron-audit
@@ -90,7 +117,7 @@ python3 skills/lobster-doctor/scripts/lobster_doctor.py cron-audit
 - 名称含 test/debug/tmp 的临时任务
 - 任务创建时间和下次运行时间
 
-### 4️⃣ stats — 文件统计
+### 5️⃣ stats — 文件统计
 
 ```bash
 python3 skills/lobster-doctor/scripts/lobster_doctor.py stats
