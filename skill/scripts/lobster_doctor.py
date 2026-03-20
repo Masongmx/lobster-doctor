@@ -257,6 +257,10 @@ def cmd_check():
     else:
         print("🌳 记忆树: 未安装")
     print()
+    
+    # 9. Token 消耗诊断
+    token_issues = diagnose_token_usage()
+    issues.extend(token_issues)
 
     # 总结
     if issues:
@@ -560,6 +564,138 @@ def cmd_stats():
         mem_files = list(memory_dir.glob('*.md'))
         mem_size = sum(f.stat().st_size for f in mem_files if f.is_file())
         print(f"📝 记忆日志: {len(mem_files)} 个, {fmt_size(mem_size)}")
+
+
+# ==================== Token 消耗诊断 ====================
+
+def get_session_history_size():
+    """获取会话历史总大小"""
+    sessions_dir = Path.home() / ".openclaw" / "agents" / "main" / "sessions"
+    if not sessions_dir.exists():
+        return 0, []
+    
+    total_size = 0
+    session_list = []
+    
+    for f in sessions_dir.glob("*.jsonl"):
+        try:
+            size = f.stat().st_size
+            total_size += size
+            # 估算轮次（粗略）
+            with open(f, 'r') as file:
+                turns = sum(1 for _ in file)
+            session_list.append((f.name, size, turns))
+        except:
+            pass
+    
+    return total_size, session_list
+
+
+def diagnose_token_usage():
+    """诊断 Token 消耗情况"""
+    print(f"\n{'='*50}")
+    print(f"📊 Token 消耗诊断")
+    print(f"{'='*50}\n")
+    
+    issues = []
+    
+    # 1. 会话历史
+    session_size, sessions = get_session_history_size()
+    session_tokens = session_size // 4  # 粗略估算
+    print(f"💬 会话历史: {fmt_size(session_size)} (~{session_tokens:,} tokens)")
+    
+    if sessions:
+        print(f"   活跃会话:")
+        for name, size, turns in sorted(sessions, key=lambda x: -x[1])[:5]:
+            tokens = size // 4
+            warn = "⚠️" if tokens > 100000 else "  "
+            print(f"   {warn} {name[:20]}: {turns}轮, ~{tokens:,} tokens")
+            if tokens > 100000:
+                issues.append(f"会话 {name[:16]}... 历史过大 (~{tokens:,} tokens)")
+    
+    if session_tokens > 500000:
+        print(f"\n   ⚠️ 会话历史过大！每次请求都在重复发送这些历史。")
+        print(f"   建议：")
+        print(f"     /compress  — 压缩记忆，大事记住小事忘掉")
+        print(f"     /new       — 开新会话，清空历史轻装上阵")
+    elif session_tokens > 100000:
+        print(f"\n   💡 会话历史较长，可考虑 /compress 或 /new")
+    
+    # 2. MEMORY.md
+    memory_file = WORKSPACE / "MEMORY.md"
+    if memory_file.exists():
+        memory_size = memory_file.stat().st_size
+        memory_tokens = memory_size // 4
+        print(f"\n📝 MEMORY.md: {fmt_size(memory_size)} (~{memory_tokens:,} tokens)")
+        if memory_tokens > 5000:
+            print(f"   💡 可考虑归档旧内容到 memory/ 目录")
+    
+    # 3. 技能描述
+    skills_dir = WORKSPACE / "skills"
+    total_desc_chars = 0
+    skill_count = 0
+    if skills_dir.exists():
+        import re
+        for skill_path in skills_dir.iterdir():
+            if not skill_path.is_dir():
+                continue
+            skill_md = skill_path / "SKILL.md"
+            if skill_md.exists():
+                try:
+                    content = skill_md.read_text()
+                    # 提取 description
+                    fm_match = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+                    if fm_match:
+                        fm = fm_match.group(1)
+                        desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
+                        if desc_match:
+                            desc = desc_match.group(1)
+                            desc = re.sub(r'^\s*>\s*', '', desc, flags=re.MULTILINE).strip()
+                            total_desc_chars += len(desc)
+                            skill_count += 1
+                except:
+                    pass
+    
+    # 系统技能
+    sys_skills_dir = Path.home() / ".npm-global" / "lib" / "node_modules" / "openclaw" / "skills"
+    if sys_skills_dir.exists():
+        import re
+        for skill_path in sys_skills_dir.iterdir():
+            if not skill_path.is_dir():
+                continue
+            skill_md = skill_path / "SKILL.md"
+            if skill_md.exists():
+                try:
+                    content = skill_md.read_text()
+                    fm_match = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+                    if fm_match:
+                        fm = fm_match.group(1)
+                        desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
+                        if desc_match:
+                            desc = desc_match.group(1)
+                            desc = re.sub(r'^\s*>\s*', '', desc, flags=re.MULTILINE).strip()
+                            total_desc_chars += len(desc)
+                            skill_count += 1
+                except:
+                    pass
+    
+    desc_tokens = total_desc_chars // 4
+    print(f"\n🧩 技能描述: {skill_count} 个技能, ~{desc_tokens:,} tokens")
+    if desc_tokens > 5000:
+        print(f"   💡 可运行 skill-slim report 查看优化空间")
+    
+    # 总结
+    total_estimated = session_tokens + memory_tokens + desc_tokens
+    print(f"\n{'='*50}")
+    print(f"📈 每轮请求估算: ~{total_estimated:,} tokens")
+    
+    if session_tokens > 500000:
+        print(f"\n⚠️ 主要消耗: 会话历史 ({session_tokens:,} tokens)")
+        print(f"   立即行动: /compress 或 /new")
+    elif total_estimated > 100000:
+        print(f"\n💡 Token 消耗较高，建议优化")
+    
+    return issues
 
 
 # ==================== CLI ====================
