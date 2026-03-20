@@ -328,13 +328,112 @@ def cmd_apply(skills):
     print("   systemctl --user restart openclaw-gateway.service")
 
 
+def cmd_duplicates(skills):
+    """扫描功能相似的重复技能"""
+    import difflib
+
+    print("🦞 龙虾医生 — 重复技能检测\n")
+
+    names = list(skills.keys())
+    descs = {}
+    for name, info in skills.items():
+        raw = info['raw_desc'].strip().strip('"\'')
+        raw = re.sub(r'^\s*>\s*', '', raw, flags=re.MULTILINE).strip()
+        raw = re.sub(r'\s+', ' ', raw)
+        # 提取核心关键词用于比较
+        slim = clean_description(info['raw_desc'])
+        descs[name] = {
+            'desc': raw,
+            'slim': slim,
+            'keywords': set(re.findall(r'[\w]+', slim.lower()))
+        }
+
+    # 已知的重复技能对（手动维护的规则库）
+    KNOWN_DUPLICATES = [
+        ("github", "github-ops", "GitHub 操作"),
+        ("market-research", "nero-market-research", "市场调研"),
+        ("news-briefing", "news-summary", "新闻摘要"),
+        ("news-briefing", "news-aggregator", "新闻聚合"),
+        ("news-summary", "news-aggregator", "新闻聚合"),
+        ("stock-analysis", "stock-monitor", "股票分析"),
+        ("nano-banana-pro", "ai-nano-banana-ima", "Nano Banana 生图"),
+        ("find-skills", "ocms-ai-prompt-generator", "技能/提示词发现"),
+        ("deep-research-pro", "competitor-research", "深度研究"),
+        ("blog-writer", "ai-prompt-engineering-safety-review", "写作/提示词优化"),
+    ]
+
+    print("📋 已知重复技能对:\n")
+    known_found = []
+    for a, b, reason in KNOWN_DUPLICATES:
+        if a in skills and b in skills:
+            known_found.append((a, b, reason))
+            a_len = len(descs[a]['desc'])
+            b_len = len(descs[b]['desc'])
+            waste = a_len + b_len
+            print(f"  ⚠️  {a} ↔ {b}")
+            print(f"      共同功能: {reason}")
+            print(f"      description 总长: {waste} chars (建议禁用一个省 {min(a_len, b_len)} chars)")
+            print()
+
+    if not known_found:
+        print("  ✅ 未发现已知重复技能对\n")
+
+    # 基于关键词的语义相似度检测
+    print("🔍 语义相似度检测 (关键词重叠):\n")
+    potential_dupes = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            a, b = names[i], names[j]
+            # 跳过已检测的已知对
+            if any((a == x and b == y) or (a == y and b == x) for x, y, _ in known_found):
+                continue
+            ka = descs[a]['keywords']
+            kb = descs[b]['keywords']
+            if not ka or not kb:
+                continue
+            # Jaccard 相似度
+            intersection = ka & kb
+            union = ka | kb
+            if len(union) == 0:
+                continue
+            similarity = len(intersection) / len(union)
+            if similarity >= 0.5 and len(intersection) >= 3:
+                potential_dupes.append((a, b, similarity, intersection))
+
+    potential_dupes.sort(key=lambda x: -x[2])
+    if potential_dupes:
+        for a, b, sim, common in potential_dupes[:15]:
+            print(f"  💡 {a} ↔ {b}")
+            print(f"      相似度: {sim:.0%}  共同关键词: {', '.join(sorted(common)[:8])}")
+            print()
+    else:
+        print("  ✅ 未发现其他相似技能\n")
+
+    # 汇总建议
+    total_waste = sum(
+        len(descs[a]['desc']) + len(descs[b]['desc']) for a, b, _ in known_found
+    )
+    print("=" * 50)
+    print(f"📊 检测结果汇总:")
+    print(f"   已知重复对: {len(known_found)} 组")
+    print(f"   疑似重复对: {len(potential_dupes)} 组")
+    if total_waste > 0:
+        print(f"   重复技能浪费 description: {total_waste} chars ({fmt_tokens(total_waste)} tokens)")
+        print()
+        print("💡 建议: 每组重复技能禁用其中一个（保留更新或更活跃的那个）")
+        print("   禁用方法: openclaw config set skills.entries.<技能名>.enabled false")
+    else:
+        print("   ✅ 无重复技能浪费")
+
+
 def main():
     if len(sys.argv) < 2:
         print("🦞 龙虾医生 — 技能瘦身 (Skill Slim)\n")
         print("命令:")
-        print("  report    查看技能 token 消耗报告（不修改）")
-        print("  dry-run   预览精简效果（不修改）")
-        print("  apply     应用精简（修改 SKILL.md，自动备份）")
+        print("  report       查看技能 token 消耗报告（不修改）")
+        print("  dry-run      预览精简效果（不修改）")
+        print("  apply        应用精简（修改 SKILL.md，自动备份）")
+        print("  duplicates   检测功能相似的重复技能")
         return
 
     skills = scan_all_skills()
@@ -349,6 +448,8 @@ def main():
         cmd_dry_run(skills)
     elif cmd == "apply":
         cmd_apply(skills)
+    elif cmd == "duplicates":
+        cmd_duplicates(skills)
     else:
         print(f"❌ 未知命令: {cmd}")
 

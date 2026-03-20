@@ -41,6 +41,7 @@ python3 skills/lobster-doctor/scripts/lobster_doctor.py stats
 python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim report    # 报告
 python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim dry-run   # 预览
 python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim apply     # 执行
+python3 skills/lobster-doctor/scripts/lobster_doctor.py skill-slim duplicates # 检测重复技能
 ```
 
 ### 设置每周自动体检
@@ -61,6 +62,7 @@ openclaw cron add --name "lobster-doctor-weekly" --cron "0 9 * * 1" \
 | "看看文件分布" | `stats` |
 | "技能太多了/token太贵" | `skill-slim report` |
 | "精简技能描述" | `skill-slim dry-run` → 确认 → `skill-slim apply` |
+| "检查有没有重复技能" | `skill-slim duplicates` |
 | "设置每周自动体检" | 创建 cron 定时任务 |
 
 ## 功能说明
@@ -106,6 +108,7 @@ workspace 文件分布：按类型、按目录大小、已安装技能数量。
 **安全机制**：
 - `report` / `dry-run` 不修改任何文件
 - `apply` 自动备份原 SKILL.md 到 `.cleanup-backup/skill-slim/`
+- `duplicates` 检测功能相似重复技能（规则库 + 语义检测），不修改文件
 - 随时可从备份恢复
 
 **实测效果**（2026-03-20）：
