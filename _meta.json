@@ -1,0 +1,9 @@
+{
+  "slug": "lobster-doctor-skill-slim",
+  "name": "Lobster Doctor",
+  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。体检诊断+安全清理+技能瘦身+Memory归档+cron巡检。说句话就能用。",
+  "version": "2.1.0",
+  "author": "Masongmx",
+  "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving", "memory-archive"],
+  "license": "MIT"
+}
