@@ -1,48 +1,84 @@
 ---
 name: lobster-doctor
-description: 🦞 龙虾医生 — Workspace 健康管家。体检+清理+技能瘦身+Memory归档。说句话就能用。
+description: OpenClaw workspace 健康管家。当用户提到清理、瘦身、归档、token用量、会话健康时触发。支持 health/archive/slim/cleanup 命令。每周定期执行健康检查。
 ---
 
 # 🦞 龙虾医生
 
-你的 OpenClaw workspace 会越来越臃肿——会话历史堆积、临时文件堆积、技能描述膨胀。龙虾医生帮你自动治理。
+> 装得下，用得久，清得掉。
 
-## 核心功能
+OpenClaw 的 workspace 健康管家。帮你监控会话健康、检测孤立进程、归档旧记忆，让 agent 跑得更久、更稳。
 
-| 功能 | 一句话触发 |
-|------|-----------|
-| 体检诊断 | 「给龙虾做个体检」 |
-| 安全清理 | 「帮我清理一下」 |
-| 技能瘦身 | 「技能太多了」 |
-| Memory归档 | 「归档过期记忆」 |
-| 会话健康 | 「会话健康怎么样」 |
-| cron巡检 | 「检查僵尸任务」 |
+## 核心价值
 
-## 独家功能：技能瘦身
+| 价值 | 功能 | 说明 |
+|------|------|------|
+| **装得下** | Memory 归档 | 归档旧记忆，控制 memory 增长 |
+| **用得久** | 会话监控 | 相对阈值告警，避免上下文溢出 |
+| **清得掉** | 安全清理 | 白名单 + 备份 + 撤销，绝不误删 |
 
-**问题**：每个技能的 description 都注入系统提示。100+ 技能 = 每轮白白烧掉几千 tokens。
+## 功能列表
 
-**解法**：精简 description，只保留核心功能句。
+| 功能 | 命令 | 触发方式 |
+|------|------|----------|
+| **健康检查** | `health` | Agent 主动（每周定期） |
+| **Memory 归档** | `archive` | 用户触发："归档旧记忆" |
+| **会话检查** | `session` | 用户触发："token 用量怎么样" |
+| **技能瘦身** | `slim` | 用户触发："技能瘦身" |
+| **安全清理** | `cleanup` | 用户触发："帮我清理一下" |
 
-**效果**：每轮节省 ~574 tokens。
+## Agent 主动触发规则
+
+| 时机 | 执行动作 |
+|------|----------|
+| 每周定期 | 健康检查 → 发现问题推送到飞书 |
+
+## 相对阈值设计
+
+基于模型上下文窗口的百分比：
+
+| 状态 | 阈值 | 说明 |
+|------|------|------|
+| 🟢 健康 | <50% | 大量空间 |
+| 🟡 注意 | 50-70% | 开始关注 |
+| ⚠️ 警告 | 70-85% | 建议处理 |
+| 🔴 危险 | >85% | 立即处理 |
+
+## 命令行用法
+
+```bash
+# 健康检查
+python3 scripts/lobster_doctor.py health
+
+# Memory 归档
+python3 scripts/lobster_doctor.py archive
+
+# 会话检查
+python3 scripts/lobster_doctor.py session
+
+# 技能瘦身
+python3 scripts/lobster_doctor.py slim
+
+# 安全清理
+python3 scripts/lobster_doctor.py cleanup
+
+# 撤销清理
+python3 scripts/lobster_doctor.py cleanup --undo
+```
 
 ## 安全机制
 
-- 预览优先：任何修改都先展示预览
-- 自动备份：清理前自动备份到 `.cleanup-backup/`
-- 白名单保护：核心文件永不删除
-- 零 API 调用：纯本地运行
+- **白名单保护**：核心文件永不删除
+- **自动备份**：清理前自动备份
+- **一键撤销**：支持 undo 操作
+- **相对阈值**：适配不同模型
+- **零 Token**：纯本地运行
 
 ## 安装
 
 ```bash
-clawhub install lobster-doctor-skill-slim
+clawhub install lobster-doctor
 ```
-
-## 更新日志
-
-- v2.1.0: Memory归档命令、修复去重算法
-- v2.0.0: 会话健康监控、周报生成
 
 ## License
 
