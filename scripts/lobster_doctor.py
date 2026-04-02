@@ -1498,6 +1498,8 @@ def main():
         print("  slim              技能瘦身")
         print("  cleanup           安全清理")
         print("  cleanup --undo    撤销清理")
+        print("  system-health     系统体检（文件夹结构 + 大小）✨ 新增")
+        print("  system-cleanup    系统清理（整合清理流程）✨ 新增")
         print("  session           会话检查（相对阈值）")
         print("  health            健康检查（Agent 定期执行）")
         print()
