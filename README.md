@@ -1,135 +1,241 @@
-# 🦞 龙虾医生
+# 🦞 Lobster Doctor
 
-> **装得下，用得久，清得掉。**
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-%3E%3D0.3.0-blue)](https://github.com/Masongmx/openclaw)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-v4.0.0-green)](https://github.com/Masongmx/openclaw/tree/main/skills/lobster-doctor)
 
-OpenClaw 的 workspace 健康管家。帮你监控会话健康、检测孤立进程、归档旧记忆，让 agent 跑得更久、更稳。
+> **Pack it, Run it, Clean it.**
+> 
+> 装得下，用得久，清得掉。
 
-## 快速开始
+OpenClaw's workspace health guardian. Monitor session health, detect orphaned processes, archive old memories, and keep your agent running longer and smoother.
+
+[中文文档](SKILL.md) | [Detailed Guide](KNOWLEDGE.md)
+
+---
+
+## ✨ Features
+
+- **🧠 Smart Memory Management** — Archive old memories to extend session lifespan
+- **📊 Relative Threshold Alerts** — Token warnings based on model context window, not fixed values
+- **🛡️ Safe Cleanup** — Whitelist protection + automatic backups + one-click undo
+- **🔍 Health Diagnostics** — Comprehensive workspace health checks with actionable recommendations
+- **⚡ Zero-Token Operation** — Runs locally without LLM calls
+- **🔄 Scheduled Maintenance** — Automatic weekly health checks
+
+---
+
+## 📦 Installation
 
 ```bash
-# 健康检查（你说："检查一下健康"）
+# Install via ClawHub
+clawhub install lobster-doctor
+
+# Or clone manually
+cd ~/.openclaw/workspace/skills
+git clone https://github.com/Masongmx/openclaw.git lobster-doctor
+```
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Health check (say: "check my health")
 python3 scripts/lobster_doctor.py health
 
-# Memory 归档（你说："归档旧记忆"）
+# Archive old memories (say: "archive old memories")
 python3 scripts/lobster_doctor.py archive
 
-# 会话检查（你说："token 用量怎么样"）
+# Check token usage (say: "how's my token usage")
 python3 scripts/lobster_doctor.py session
 ```
 
-## 功能
+---
 
-| 功能 | 命令 | 说明 |
-|------|------|------|
-| **健康检查** | `health` | **P0**：全面诊断 workspace 状态 |
-| **Memory 归档** | `archive` | **P0**：归档旧记忆，延长会话续航 |
-| **会话检查** | `session` | **P1**：基于相对阈值的 token 监控 |
-| **技能瘦身** | `slim` | **P2**：精简 description，锦上添花 |
-| **安全清理** | `cleanup` | **P1**：清理废弃文件，白名单保护 |
+## 📖 Commands Reference
 
-## 核心价值
+| Command | Priority | Description |
+|---------|----------|-------------|
+| `health` | **P0** | Comprehensive workspace diagnostics |
+| `archive` | **P0** | Archive old memory files to extend sessions |
+| `session` | **P1** | Token usage monitoring with relative thresholds |
+| `cleanup` | **P1** | Safe cleanup of obsolete files |
+| `slim` | **P2** | Trim skill descriptions for efficiency |
+| `system-health` | **P1** | System体检 (folder structure + size analysis) |
+| `system-cleanup` | **P1** | Integrated cleanup workflow |
 
-| 价值 | 功能 | 说明 |
-|------|------|------|
-| **装得下** | Memory 归档 | 归档旧记忆，控制 memory 增长 |
-| **用得久** | 会话监控 | 相对阈值告警，避免上下文溢出 |
-| **清得掉** | 安全清理 | 白名单 + 备份 + 撤销，绝不误删 |
-
-## 用户怎么说，Agent 怎么做
-
-| 用户说的话 | Agent 的动作 |
-|------------|-------------|
-| "检查一下健康" | 执行全面健康检查 |
-| "归档旧记忆" | 归档过期 memory 文件 |
-| "token 用量怎么样" | 检查会话 token 使用率 |
-| "技能瘦身" | 精简技能 description |
-| "帮我清理一下" | 安全清理废弃文件 |
-
-**Agent 主动触发**：
-- 每周定期：健康检查，发现问题推送到飞书
-
-## 健康检查输出
-
-```
-🦞 龙虾医生 — 健康检查 (2026-03-26 18:15)
-
-🔴 会话: 36 个, ~1.9M tokens (1452.5%)
-   上下文窗口: 128K tokens
-   剩余: ~-1731198 tokens
-   🚨 危险会话: 4 个
-   ⚠️  警告会话: 1 个
-
-📦 废弃文件: 1 个, 20.6KB
-
-🧩 技能: 102 个, description ~3K tokens
-
-🧠 Bootstrap: ~101K tokens
-
-⚠️ 发现 3 个问题:
-   🔴 危险会话: 4 个
-   🟡 警告会话: 1 个
-   🧠 Bootstrap 过大: ~101K tokens
-```
-
-## 相对阈值设计
-
-基于模型上下文窗口的百分比，而非固定值：
-
-| 状态 | 阈值 | 说明 |
-|------|------|------|
-| 🟢 健康 | <50% | 大量空间 |
-| 🟡 注意 | 50-70% | 开始关注 |
-| ⚠️ 警告 | 70-85% | 建议处理 |
-| 🔴 危险 | >85% | 立即处理 |
-
-**优势**：适配不同模型（GPT-4o 128K、Claude 200K 等），阈值自动调整。
-
-## Memory 归档
-
-归档过期 memory 文件，延长会话续航：
+### Health Check
 
 ```bash
-# 归档（默认 30 天前）
+python3 scripts/lobster_doctor.py health [--json]
+```
+
+Output includes:
+- Memory file count and total lines
+- Session health status
+- Skill usage statistics
+- Orphaned process detection
+
+### Archive Memory
+
+```bash
+# Archive files older than 30 days (default)
 python3 scripts/lobster_doctor.py archive
 
-# 自定义天数
+# Custom retention period
 python3 scripts/lobster_doctor.py archive --days 60
 
-# 撤销归档
+# Undo last archive
 python3 scripts/lobster_doctor.py archive --undo
 ```
 
-**归档内容**：
-- 超过指定天数的 memory 日志
-- 已完成的任务记录
-- 过期的待办事项
-
-**安全机制**：
-- 归档前备份
-- 保留永久标记（📌）的记忆
-- 支持撤销
-
-## 安全机制
-
-- **白名单保护**：核心文件永不删除
-- **自动备份**：清理前自动备份到 `.cleanup-backup/`
-- **一键撤销**：`cleanup --undo` / `archive --undo`
-- **相对阈值**：适配不同模型的上下文窗口
-- **零 Token**：纯本地运行，不调用 LLM
-
-## 安装
+### Session Check
 
 ```bash
-clawhub install lobster-doctor
+python3 scripts/lobster_doctor.py session [--json]
 ```
 
-## 更新日志
+Shows each session's:
+- Token usage percentage
+- Health status (healthy/attention/warning/danger)
+- Recommended actions
 
-- v4.0.0: 重新定位"装得下，用得久，清得掉"，新增 Memory 归档、相对阈值、孤立进程检测
-- v3.0.0: 精简到 4 个核心命令，Agent 主动健康检查
-- v2.2.0: Token 监控告警、飞书推送修复
-- v2.0.0: 会话健康监控、周报生成
+### Safe Cleanup
 
-## License
+```bash
+# Clean obsolete files
+python3 scripts/lobster_doctor.py cleanup
 
-MIT
+# Undo last cleanup
+python3 scripts/lobster_doctor.py cleanup --undo
+```
+
+---
+
+## ⚙️ Configuration
+
+### Relative Thresholds
+
+Based on model context window percentages, not fixed values:
+
+| Status | Threshold | Action |
+|--------|-----------|--------|
+| 🟢 Healthy | <50% | Plenty of space |
+| 🟡 Attention | 50-70% | Start monitoring |
+| ⚠️ Warning | 70-85% | Take action |
+| 🔴 Danger | >85% | Immediate attention |
+
+**Benefits**: Automatically adapts to different models (GPT-4o 128K, Claude 200K, etc.)
+
+### Whitelist Protection
+
+Core files are never deleted:
+- `MEMORY.md`
+- `SOUL.md`
+- `IDENTITY.md`
+- `USER.md`
+- `AGENTS.md`
+- `PROGRESS.md`
+- `rules/common/*.md`
+
+### Scheduled Tasks
+
+```json
+{
+  "autoRun": {
+    "command": "health",
+    "schedule": "0 8 * * *"
+  }
+}
+```
+
+---
+
+## 🔒 Safety Mechanisms
+
+| Mechanism | Description |
+|-----------|-------------|
+| **Whitelist** | Core files are never deleted |
+| **Auto-backup** | Automatic backup to `.cleanup-backup/` |
+| **One-click Undo** | `--undo` flag restores from backup |
+| **Relative Thresholds** | Adapts to model context windows |
+| **Zero Token** | Pure local execution, no LLM calls |
+
+---
+
+## 💬 Natural Language Triggers
+
+| What You Say | What Agent Does |
+|--------------|-----------------|
+| "Check my health" | Run comprehensive health check |
+| "Archive old memories" | Archive expired memory files |
+| "How's my token usage" | Check session token usage |
+| "Slim down my skills" | Trim skill descriptions |
+| "Clean up my workspace" | Safe cleanup of obsolete files |
+| "System体检" | Run system health diagnostics |
+
+---
+
+## 📊 Sample Output
+
+```
+🦞 Lobster Doctor — Health Check (2026-03-26 18:15)
+
+🔴 Sessions: 36 sessions, ~1.9M tokens (1452.5%)
+   Context window: 128K tokens
+   Remaining: ~-1731198 tokens
+   🚨 Danger sessions: 4
+   ⚠️  Warning sessions: 1
+
+📦 Obsolete files: 1 file, 20.6KB
+
+🧩 Skills: 102 skills, description ~3K tokens
+
+🧠 Bootstrap: ~101K tokens
+
+⚠️ Found 3 issues:
+   🔴 Danger sessions: 4
+   🟡 Warning sessions: 1
+   🧠 Bootstrap oversized: ~101K tokens
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📝 Changelog
+
+- **v4.0.0** — Repositioned as "Pack it, Run it, Clean it". Added memory archiving, relative thresholds, orphaned process detection
+- **v3.0.0** — Streamlined to 4 core commands. Agent-triggered health checks
+- **v2.2.0** — Token monitoring alerts, Feishu push fixes
+- **v2.0.0** — Session health monitoring, weekly reports
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🔗 Related
+
+- [OpenClaw](https://github.com/Masongmx/openclaw) — The main framework
+- [ClawHub](https://github.com/Masongmx/openclaw) — Skill registry
+
+---
+
+<p align="center">
+  Made with 🦞 by <a href="https://github.com/Masongmx">Masongmx</a>
+</p>
