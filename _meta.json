@@ -1,9 +1,25 @@
 {
-  "slug": "lobster-doctor-skill-slim",
+  "slug": "lobster-doctor",
   "name": "Lobster Doctor",
-  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。装得下，用得久，清得掉。体检诊断+安全清理+技能瘦身+Memory归档+cron巡检。",
-  "version": "4.0.0",
+  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。装得下，用得久，清得掉。体检诊断 + 安全清理 + 技能瘦身+Memory 归档+cron 巡检 + 系统体检。",
+  "version": "4.1.0",
   "author": "Masongmx",
-  "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving", "memory-archive"],
-  "license": "MIT"
+  "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving", "memory-archive", "system-health"],
+  "license": "MIT",
+  "repository": "https://github.com/openclaw/openclaw/tree/main/workspace/skills/lobster-doctor",
+  "changelog": {
+    "4.1.0": [
+      "新增 system-health 命令（系统体检）",
+      "新增 system-cleanup 命令（系统清理）",
+      "整合 Claude Code 七大设计原则",
+      "更新文档符合 GitHub 高星项目标准",
+      "新增可视化模块设计（Phase 规划）"
+    ],
+    "4.0.0": [
+      "重构为 v4.0 架构",
+      "新增 Memory 归档功能",
+      "使用相对阈值（基于模型上下文窗口）",
+      "新增孤立进程检测、内存泄漏警告"
+    ]
+  }
 }

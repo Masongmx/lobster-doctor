@@ -1,6 +1,6 @@
 {
   "name": "lobster-doctor",
-  "version": "v4.0.0",
+  "version": "v4.1.0",
   "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。装得下，用得久，清得掉。",
   "main": "scripts/lobster_doctor.py",
   "author": "Masongmx",
@@ -11,7 +11,9 @@
     "optimization",
     "skill-management",
     "token-saving",
-    "memory-archive"
+    "memory-archive",
+    "system-health",
+    "workspace-structure"
   ],
   "engines": {
     "openclaw": ">=0.3.0"
@@ -21,19 +23,24 @@
     "slim": "python3 scripts/lobster_doctor.py slim",
     "cleanup": "python3 scripts/lobster_doctor.py cleanup",
     "session": "python3 scripts/lobster_doctor.py session",
-    "archive": "python3 scripts/lobster_doctor.py archive"
+    "archive": "python3 scripts/lobster_doctor.py archive",
+    "system-health": "python3 scripts/lobster_doctor.py system-health",
+    "system-cleanup": "python3 scripts/lobster_doctor.py system-cleanup"
   },
   "config": {
     "defaultModel": "local",
     "requiresNet": false,
     "autoRun": {
       "command": "health",
-      "schedule": "0 8 * * *"
+      "schedule": "0 6 * * 3"
     }
   },
   "files": [
+    "README.md",
     "SKILL.md",
+    "KNOWLEDGE.md",
     "scripts/",
-    "tests/"
+    "tests/",
+    "docs/"
   ]
 }

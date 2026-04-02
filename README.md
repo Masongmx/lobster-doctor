@@ -2,7 +2,7 @@
 
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-%3E%3D0.3.0-blue)](https://github.com/Masongmx/openclaw)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v4.0.0-green)](https://github.com/Masongmx/openclaw/tree/main/skills/lobster-doctor)
+[![Version](https://img.shields.io/badge/version-v4.1.0-green)](https://github.com/Masongmx/openclaw/tree/main/skills/lobster-doctor)
 
 > **Pack it, Run it, Clean it.**
 > 
@@ -20,8 +20,10 @@ OpenClaw's workspace health guardian. Monitor session health, detect orphaned pr
 - **📊 Relative Threshold Alerts** — Token warnings based on model context window, not fixed values
 - **🛡️ Safe Cleanup** — Whitelist protection + automatic backups + one-click undo
 - **🔍 Health Diagnostics** — Comprehensive workspace health checks with actionable recommendations
+- **🖥️ System Health Check** — NEW! Monitor workspace size, hidden folders, and structural violations
+- **🧹 System Cleanup** — NEW! 3-phase cleanup with backup and undo support
 - **⚡ Zero-Token Operation** — Runs locally without LLM calls
-- **🔄 Scheduled Maintenance** — Automatic weekly health checks
+- **🔄 Scheduled Maintenance** — Automatic weekly health checks (Wed 06:00)
 
 ---
 
@@ -50,6 +52,48 @@ python3 scripts/lobster_doctor.py archive
 # Check token usage (say: "how's my token usage")
 python3 scripts/lobster_doctor.py session
 ```
+
+---
+
+## 🆕 What's New in v4.1.0
+
+### System Health Check
+```bash
+# Check workspace structure (say: "check workspace health")
+python3 scripts/lobster_doctor.py system-health
+```
+
+**Output:**
+- Workspace size (target: <500MB 🟢)
+- Hidden folder count (target: <15 🟢)
+- Large files (>50MB)
+- Structural violations (multi-workspace, duplicate configs)
+
+### System Cleanup
+```bash
+# Clean workspace (say: "clean up workspace")
+python3 scripts/lobster_doctor.py system-cleanup
+```
+
+**3-Phase Cleanup:**
+1. **Phase 1**: Safe cleanup (temp files, node_modules, reference/)
+2. **Phase 2**: Structure fix (migrate archive, remove duplicate configs)
+3. **Phase 3**: Deep cleanup (AI tool residuals, old backups)
+
+**Safety:**
+- Auto backup to `.cleanup-backup/`
+- Whitelist protection (core files never deleted)
+- Undo support: `python3 scripts/lobster_doctor.py cleanup --undo`
+
+### Claude Code Design Principles
+Integrated 7 core principles from Claude Code architecture:
+1. Don't trust model自觉性 → Institutionalize behavior
+2. Separate roles → main/reviewer/developer
+3. Tool governance → 14-step pipeline
+4. Context is budget → Workspace size limits
+5. Security layers don't bypass → 3-layer protection
+6. Ecosystem needs model awareness → Natural language triggers
+7. Productization handles Day 2 → Cleanup chain + cron
 
 ---
 

@@ -934,6 +934,287 @@ def cmd_cleanup_undo(args):
 
 # ==================== 健康检查 (Agent 主动) ====================
 
+# ==================== 系统体检（新增） ====================
+
+def cmd_system_health(args):
+    """
+    系统体检命令
+    
+    检测项：
+    1. workspace 大小
+    2. ~/.openclaw/ 总大小
+    3. 隐藏文件夹数量
+    4. 大文件检测
+    5. 违规结构检测
+    """
+    results = {
+        "workspace_size": 0,
+        "openclaw_size": 0,
+        "hidden_folders": [],
+        "large_files": [],
+        "violations": [],
+        "status": "🟢 健康"
+    }
+    
+    # 1. 计算 workspace 大小
+    workspace_size = sum(f.stat().st_size for f in WORKSPACE.rglob('*') if f.is_file())
+    results["workspace_size"] = workspace_size
+    
+    # 2. 计算 ~/.openclaw/ 总大小
+    openclaw_dir = Path.home() / ".openclaw"
+    openclaw_size = sum(f.stat().st_size for f in openclaw_dir.rglob('*') if f.is_file())
+    results["openclaw_size"] = openclaw_size
+    
+    # 3. 扫描隐藏文件夹
+    hidden = [d.name for d in WORKSPACE.iterdir() if d.is_dir() and d.name.startswith('.')]
+    results["hidden_folders"] = hidden
+    
+    # 4. 检测大文件 (>50MB)
+    for f in WORKSPACE.rglob('*'):
+        if f.is_file() and f.stat().st_size > 50 * 1024 * 1024:
+            results["large_files"].append({
+                "path": str(f.relative_to(WORKSPACE)),
+                "size": f.stat().st_size
+            })
+    
+    # 5. 检测违规结构
+    violations = []
+    
+    # 检查多工作区
+    for d in Path.home().glob(".openclaw/workspace-*"):
+        if d.is_dir():
+            violations.append({
+                "type": "multi_workspace",
+                "path": str(d),
+                "severity": "🔴"
+            })
+    
+    # 检查重复配置
+    if (WORKSPACE / "openclaw.json").exists():
+        violations.append({
+            "type": "duplicate_config",
+            "path": "workspace/openclaw.json",
+            "severity": "🟡"
+        })
+    
+    # 检查 archive 位置
+    if (Path.home() / ".openclaw" / "archive").exists():
+        violations.append({
+            "type": "archive_misplaced",
+            "path": "~/.openclaw/archive/",
+            "severity": "🟡"
+        })
+    
+    # 检查 memory 位置
+    if (Path.home() / ".openclaw" / "memory").exists():
+        violations.append({
+            "type": "memory_misplaced",
+            "path": "~/.openclaw/memory/",
+            "severity": "🟡"
+        })
+    
+    # 检查 AI 工具残留
+    ai_tools = ['.windsurf', '.continue', '.crush', '.goose', '.kiro', '.kilocode', 
+                '.roo', '.qoder', '.trae', '.vibe', '.zencoder', '.openhands',
+                '.pi', '.pochi', '.mux', '.neovate', '.mcpjam', '.junie', '.iflow',
+                '.factory', '.cortex', '.commandcode', '.codebuddy', '.augment', '.adal']
+    for tool in ai_tools:
+        if (WORKSPACE / tool).exists():
+            violations.append({
+                "type": "ai_tool_residual",
+                "path": f"workspace/{tool}",
+                "severity": "🟢"
+            })
+    
+    results["violations"] = violations
+    
+    # 判定状态
+    workspace_size_mb = workspace_size / (1024 * 1024)
+    hidden_count = len(hidden)
+    violation_count = len(violations)
+    
+    if workspace_size_mb > 2000 or hidden_count > 40 or violation_count > 10:
+        results["status"] = "🔴 危险"
+    elif workspace_size_mb > 1000 or hidden_count > 25 or violation_count > 5:
+        results["status"] = "⚠️ 警告"
+    elif workspace_size_mb > 500 or hidden_count > 15 or violation_count > 2:
+        results["status"] = "🟡 注意"
+    
+    # 输出
+    print(f"🦞 OpenClaw 系统体检报告")
+    print(f"{'='*50}")
+    print(f"\n📊 大小统计:")
+    print(f"   workspace: {fmt_size(workspace_size)} ({workspace_size_mb:.1f}MB)")
+    print(f"   ~/.openclaw/: {fmt_size(openclaw_size)}")
+    
+    print(f"\n📁 隐藏文件夹: {hidden_count} 个")
+    if hidden:
+        for h in sorted(hidden)[:10]:
+            print(f"   • {h}")
+        if hidden_count > 10:
+            print(f"   ... 还有 {hidden_count - 10} 个")
+    
+    print(f"\n📦 大文件 (>50MB): {len(results['large_files'])} 个")
+    for f in results["large_files"][:5]:
+        print(f"   • {f['path']} ({fmt_size(f['size'])})")
+    
+    print(f"\n🔴 违规项: {len(violations)} 个")
+    for v in violations:
+        print(f"   {v['severity']} {v['type']}: {v['path']}")
+    
+    print(f"\n{'='*50}")
+    print(f"整体状态：{results['status']}")
+    
+    if violations:
+        print(f"\n💡 建议:")
+        print(f"   python3 scripts/lobster_doctor.py system-cleanup  # 执行清理")
+    
+    if getattr(args, 'json', False):
+        print("\n\n--- JSON Output ---")
+        print(json.dumps(results, indent=2, ensure_ascii=False))
+    
+    return results
+
+
+# ==================== 系统清理（新增） ====================
+
+def cmd_system_cleanup(args):
+    """
+    系统清理命令
+    
+    Phase 1: 安全清理（临时文件）
+    Phase 2: 结构修复（需确认）
+    Phase 3: 深度清理（AI 工具残留）
+    """
+    results = {
+        "phase1": {"deleted": 0, "freed": 0},
+        "phase2": {"fixed": 0},
+        "phase3": {"deleted": 0},
+        "backup": None
+    }
+    
+    # 创建备份目录
+    backup = BACKUP_DIR / f"cleanup-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    backup.mkdir(parents=True, exist_ok=True)
+    results["backup"] = str(backup)
+    
+    print(f"🦞 开始系统清理")
+    print(f"{'='*50}")
+    print(f"📦 备份位置：{backup}")
+    
+    # Phase 1: 安全清理
+    print(f"\n{'='*50}")
+    print("Phase 1: 安全清理")
+    
+    # 1.1 删除临时 tar.gz/zip
+    for pattern in ['*.tar.gz', '*.zip']:
+        for f in WORKSPACE.glob(pattern):
+            size = f.stat().st_size
+            shutil.move(str(f), backup / f.name)
+            print(f"  🗑️ {f.name} ({fmt_size(size)})")
+            results["phase1"]["deleted"] += 1
+            results["phase1"]["freed"] += size
+    
+    # 1.2 删除 reference 目录
+    ref_dir = WORKSPACE / "reference"
+    if ref_dir.exists():
+        size = sum(f.stat().st_size for f in ref_dir.rglob('*') if f.is_file())
+        shutil.rmtree(ref_dir)
+        print(f"  🗑️ reference/ ({fmt_size(size)})")
+        results["phase1"]["deleted"] += 1
+        results["phase1"]["freed"] += size
+    
+    # 1.3 删除 node_modules
+    nm_dir = WORKSPACE / "node_modules"
+    if nm_dir.exists():
+        size = sum(f.stat().st_size for f in nm_dir.rglob('*') if f.is_file())
+        shutil.rmtree(nm_dir)
+        print(f"  🗑️ node_modules/ ({fmt_size(size)})")
+        results["phase1"]["deleted"] += 1
+        results["phase1"]["freed"] += size
+    
+    # 1.4 删除 package files
+    for pf in ['package.json', 'package-lock.json']:
+        f = WORKSPACE / pf
+        if f.exists():
+            size = f.stat().st_size
+            shutil.move(str(f), backup / pf)
+            print(f"  🗑️ {pf} ({fmt_size(size)})")
+            results["phase1"]["deleted"] += 1
+            results["phase1"]["freed"] += size
+    
+    print(f"\nPhase 1 完成：删除 {results['phase1']['deleted']} 个文件，释放 {fmt_size(results['phase1']['freed'])}")
+    
+    # Phase 2: 结构修复
+    print(f"\n{'='*50}")
+    print("Phase 2: 结构修复")
+    
+    # 2.1 迁移 archive
+    archive_src = Path.home() / ".openclaw" / "archive"
+    archive_dst = WORKSPACE / "memory" / "archive"
+    if archive_src.exists():
+        archive_dst.mkdir(parents=True, exist_ok=True)
+        for f in archive_src.glob('*'):
+            shutil.move(str(f), archive_dst / f.name)
+            print(f"  📦 迁移：{f.name}")
+            results["phase2"]["fixed"] += 1
+        archive_src.rmdir()
+    
+    # 2.2 删除重复配置
+    dup_config = WORKSPACE / "openclaw.json"
+    if dup_config.exists():
+        shutil.move(str(dup_config), backup / "openclaw.json")
+        print(f"  🗑️ 删除重复配置：workspace/openclaw.json")
+        results["phase2"]["fixed"] += 1
+    
+    print(f"Phase 2 完成：修复 {results['phase2']['fixed']} 项")
+    
+    # Phase 3: 深度清理
+    print(f"\n{'='*50}")
+    print("Phase 3: 深度清理")
+    
+    # 3.1 删除 AI 工具残留
+    ai_tools = ['.windsurf', '.continue', '.crush', '.goose', '.kiro', '.kilocode', 
+                '.roo', '.qoder', '.trae', '.vibe', '.zencoder', '.openhands',
+                '.pi', '.pochi', '.mux', '.neovate', '.mcpjam', '.junie', '.iflow',
+                '.factory', '.cortex', '.commandcode', '.codebuddy', '.augment', '.adal', '.kode', '.qwen']
+    for tool in ai_tools:
+        d = WORKSPACE / tool
+        if d.exists() and d.is_dir():
+            shutil.rmtree(d)
+            print(f"  🗑️ {tool}/")
+            results["phase3"]["deleted"] += 1
+    
+    # 3.2 删除清理备份
+    cleanup_backup = WORKSPACE / ".cleanup-backup"
+    if cleanup_backup.exists():
+        shutil.rmtree(cleanup_backup)
+        print(f"  🗑️ .cleanup-backup/")
+        results["phase3"]["deleted"] += 1
+    
+    # 3.3 删除过期配置备份
+    for bf in Path.home().glob(".openclaw/openclaw.json.bak.*"):
+        shutil.move(str(bf), backup / bf.name)
+        print(f"  🗑️ {bf.name}")
+        results["phase3"]["deleted"] += 1
+    
+    print(f"Phase 3 完成：删除 {results['phase3']['deleted']} 项")
+    
+    # 总结
+    print(f"\n{'='*50}")
+    print(f"🎉 系统清理完成！")
+    print(f"   Phase 1: {results['phase1']['deleted']} 个文件，{fmt_size(results['phase1']['freed'])}")
+    print(f"   Phase 2: {results['phase2']['fixed']} 项修复")
+    print(f"   Phase 3: {results['phase3']['deleted']} 项清理")
+    print(f"   备份位置：{backup}")
+    
+    if getattr(args, 'json', False):
+        print("\n\n--- JSON Output ---")
+        print(json.dumps(results, indent=2, ensure_ascii=False))
+    
+    return results
+
+
 def cmd_health(args):
     """
     健康检查命令（Agent 定期执行）
@@ -1198,6 +1479,14 @@ def main():
     health_parser = subparsers.add_parser("health", help="健康检查（Agent 定期执行）")
     health_parser.add_argument("--json", action="store_true", help="JSON 输出")
     
+    # system-health (新增)
+    syshealth_parser = subparsers.add_parser("system-health", help="系统体检（文件夹结构 + 大小）")
+    syshealth_parser.add_argument("--json", action="store_true", help="JSON 输出")
+    
+    # system-cleanup (新增)
+    syscleanup_parser = subparsers.add_parser("system-cleanup", help="系统清理（整合清理流程）")
+    syscleanup_parser.add_argument("--json", action="store_true", help="JSON 输出")
+    
     args = parser.parse_args()
     
     if args.command is None:
@@ -1242,6 +1531,10 @@ def main():
         cmd_session(args)
     elif args.command == "health":
         cmd_health(args)
+    elif args.command == "system-health":
+        cmd_system_health(args)
+    elif args.command == "system-cleanup":
+        cmd_system_cleanup(args)
 
 
 if __name__ == "__main__":
