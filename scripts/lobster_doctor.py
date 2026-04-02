@@ -458,6 +458,18 @@ def cmd_archive(args):
     dry_run = getattr(args, 'dry_run', False)
     days = getattr(args, 'days', 30)
     
+    # P0 修复：负数参数验证
+    if days < 0:
+        print("❌ --days 参数不能为负数")
+        print(f"   当前值: {days}")
+        print("   用法: archive --days N (N >= 0)")
+        return {
+            "archived": [],
+            "skipped": [],
+            "errors": [{"error": "negative_days_parameter", "value": days}],
+            "freed_tokens": 0
+        }
+    
     results = {
         "archived": [],
         "skipped": [],
