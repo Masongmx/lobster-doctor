@@ -2,7 +2,7 @@
 
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-%3E%3D0.3.0-blue)](https://github.com/Masongmx/openclaw)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-v4.1.0-green)](https://github.com/Masongmx/openclaw/tree/main/skills/lobster-doctor)
+[![Version](https://img.shields.io/badge/version-v4.2.0-green)](https://github.com/Masongmx/openclaw/tree/main/skills/lobster-doctor)
 
 > **Pack it, Run it, Clean it.**
 > 
@@ -55,7 +55,69 @@ python3 scripts/lobster_doctor.py session
 
 ---
 
-## 🆕 What's New in v4.1.0
+## 🆕 What's New in v4.2.0
+
+### 🖥️ TUI (Terminal User Interface)
+
+**New!** Visual workspace health monitor with real-time status display.
+
+```bash
+# Launch the TUI
+python3 scripts/lobster_tui.py
+```
+
+**Interface Overview**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 🦞 Lobster Doctor  │  🟢 Healthy  │  16.7MB  │  📁 5  │ 🕐 22:51 │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌── Sessions ─────────┐  ┌── Files ────────┐  ┌── Skills ─────┐│
+│  │ Total Sessions: 3   │  │ Hidden: 5 🟢    │  │ Total: 47     ││
+│  │ Active: 2           │  │ Large: 0 🟢     │  │ Tokens: 150K  ││
+│  │ Token: 250K/1M 25%  │  │ Violations: 0   │  │ Avg: 3,191    ││
+│  │ [██████░░░░░░░] 🟢  │  │ Waste: 0B       │  │ Largest:      ││
+│  └─────────────────────┘  └─────────────────┘  │ deep-research ││
+│                                                └───────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ [A]rchive [S]lim [C]leanup [H]ealth [R]efresh [Q]uit            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Keyboard Shortcuts**:
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `A` | Archive | Archive old memories |
+| `S` | Slim | Trim skill descriptions |
+| `C` | Cleanup | Safe cleanup of obsolete files |
+| `H` | Health | Run comprehensive health check |
+| `R` | Refresh | Manual refresh all panels |
+| `Q` | Quit | Exit TUI safely |
+
+**Health Status Colors**:
+
+| Icon | Workspace Size | Status |
+|------|----------------|--------|
+| 🟢 | < 500MB | Healthy |
+| 🟡 | 500MB - 1GB | Attention needed |
+| 🔴 | > 1GB | Danger - immediate cleanup |
+
+**Features**:
+- **Real-time Monitoring** — 5-second auto-refresh
+- **Three-panel Layout** — Sessions, Files, Skills
+- **One-key Actions** — Trigger commands instantly
+- **Color-coded Status** — Visual health indicators
+
+**Requirements**:
+```bash
+pip install textual>=8.0.0 rich>=13.0.0
+```
+
+See [TUI User Guide](docs/tui-user-guide.md) for detailed documentation.
+
+---
+
+## What's New in v4.1.0
 
 ### System Health Check
 ```bash
@@ -260,6 +322,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📝 Changelog
 
+- **v4.2.0** — TUI MVP release. Visual workspace health monitor with Textual + Rich
+- **v4.1.0** — System health/cleanup commands, Claude Code design principles
 - **v4.0.0** — Repositioned as "Pack it, Run it, Clean it". Added memory archiving, relative thresholds, orphaned process detection
 - **v3.0.0** — Streamlined to 4 core commands. Agent-triggered health checks
 - **v2.2.0** — Token monitoring alerts, Feishu push fixes

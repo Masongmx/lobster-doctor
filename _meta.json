@@ -1,13 +1,21 @@
 {
   "slug": "lobster-doctor",
   "name": "Lobster Doctor",
-  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。装得下，用得久，清得掉。体检诊断 + 安全清理 + 技能瘦身+Memory 归档+cron 巡检 + 系统体检。",
-  "version": "4.1.0",
+  "description": "🦞 龙虾医生 — OpenClaw workspace 健康管家。装得下，用得久，清得掉。体检诊断 + 安全清理 + 技能瘦身+Memory 归档+cron 巡检 + 系统体检 + TUI 可视化。",
+  "version": "4.2.0",
   "author": "Masongmx",
-  "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving", "memory-archive", "system-health"],
+  "tags": ["health", "cleanup", "optimization", "skill-management", "token-saving", "memory-archive", "system-health", "tui", "textual"],
   "license": "MIT",
   "repository": "https://github.com/openclaw/openclaw/tree/main/workspace/skills/lobster-doctor",
   "changelog": {
+    "4.2.0": [
+      "新增 TUI 可视化界面（Textual + Rich）",
+      "实时健康监控（5秒自动刷新）",
+      "三面板布局（Sessions/Files/Skills）",
+      "快捷键操作（A/S/C/H/R/Q）",
+      "颜色标记健康状态（🟢🟡🔴）",
+      "新增 tests/screenshots 目录（待填充）"
+    ],
     "4.1.0": [
       "新增 system-health 命令（系统体检）",
       "新增 system-cleanup 命令（系统清理）",

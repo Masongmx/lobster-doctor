@@ -1,0 +1,3 @@
+# Lobster Doctor TUI Dependencies
+textual>=8.0.0
+rich>=13.0.0
