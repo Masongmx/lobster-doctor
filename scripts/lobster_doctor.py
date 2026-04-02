@@ -1,6 +1,6 @@
 #!/usr/bin/env env python3
 """
-🦞 Lobster Doctor v4.0 — 装得下，用得久，清得掉
+🦞 Lobster Doctor v4.1 — 装得下，用得久，清得掉
 
 会话监控 + Memory 归档 + 安全清理。纯本地运行，零成本。
 
@@ -16,7 +16,7 @@
   slim          技能瘦身：精简 description，省 token
   health        健康检查：Agent 定期执行，发现问题推送
 
-v4.0 变更：
+v4.1 变更：
   - 重新定位"装得下，用得久，清得掉"
   - 新增 Memory 归档（P0 核心）
   - 使用相对阈值（基于模型上下文窗口）
@@ -1448,7 +1448,7 @@ def cmd_health(args):
 # ==================== 主入口 ====================
 
 def main():
-    parser = argparse.ArgumentParser(description="🦞 Lobster Doctor v4.0 — 装得下，用得久，清得掉")
+    parser = argparse.ArgumentParser(description="🦞 Lobster Doctor v4.1 — 装得下，用得久，清得掉")
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
     
     # archive (新增 P0)
@@ -1490,7 +1490,7 @@ def main():
     args = parser.parse_args()
     
     if args.command is None:
-        print("🦞 Lobster Doctor v4.0 — 装得下，用得久，清得掉\n")
+        print("🦞 Lobster Doctor v4.1 — 装得下，用得久，清得掉\n")
         print("命令:")
         print("  archive           Memory 归档（P0 核心，延长会话续航）")
         print("  archive --days N  归档超过N天的记忆")
