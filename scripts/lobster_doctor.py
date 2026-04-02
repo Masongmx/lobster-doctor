@@ -36,61 +36,11 @@ from datetime import datetime, timedelta
 
 # 导入公共模块
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "common"))
-try:
-    from utils import (
-        load_json, save_json, file_hash, file_age_days,
-        estimate_tokens, fmt_tokens, fmt_size,
-        WORKSPACE, OPENCLAW_CONFIG
-    )
-except ImportError:
-    # 如果公共模块不可用，使用内联实现
-    WORKSPACE = Path.home() / ".openclaw" / "workspace"
-    OPENCLAW_CONFIG = Path.home() / ".openclaw" / "config.json"
-    
-    def load_json(path):
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    
-    def save_json(path, data):
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    
-    def file_hash(path):
-        try:
-            h = hashlib.sha256()
-            with open(path, 'rb') as f:
-                for chunk in iter(lambda: f.read(8192), b''):
-                    h.update(chunk)
-            return h.hexdigest()
-        except:
-            return None
-    
-    def file_age_days(path):
-        try:
-            mtime = datetime.fromtimestamp(path.stat().st_mtime)
-            return (datetime.now() - mtime).days
-        except:
-            return 0
-    
-    def estimate_tokens(text):
-        return len(text) // 4
-    
-    def fmt_tokens(n):
-        if n >= 1_000_000:
-            return f"{n/1_000_000:.1f}M"
-        elif n >= 1_000:
-            return f"{n/1_000:.0f}K"
-        return str(n)
-    
-    def fmt_size(n):
-        if n >= 1_000_000:
-            return f"{n/1_000_000:.1f}MB"
-        elif n >= 1_000:
-            return f"{n/1_000:.0f}KB"
-        return f"{n}B"
+from utils import (
+    load_json, save_json, file_hash, file_age_days,
+    estimate_tokens, fmt_tokens, fmt_size,
+    WORKSPACE, OPENCLAW_CONFIG
+)
 
 # ==================== 路径配置 ====================
 CRON_JOBS = Path.home() / ".openclaw" / "cron" / "jobs.json"
