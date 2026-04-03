@@ -1,6 +1,6 @@
 ---
 name: lobster-doctor
-description: OpenClaw workspace 健康管家。当用户提到清理、瘦身、归档、token 用量、会话健康、系统体检时触发。支持 health/archive/slim/cleanup/system-health/system-cleanup 命令。每周定期执行健康检查。
+description: OpenClaw workspace 健康管家。当用户提到清理、瘦身、归档、token 用量、会话健康、系统体检、可视化、TUI 时触发。支持 health/archive/slim/cleanup/system-health/system-cleanup 命令 + TUI 可视化界面。每周定期执行健康检查。
 ---
 
 # 🦞 龙虾医生
@@ -23,6 +23,7 @@ OpenClaw 的 workspace 健康管家。监控会话健康、检测孤立进程、
 | `slim` | **P2** | 精简技能 description |
 | `system-health` | **P1** | 系统体检（文件夹结构 + 大小分析） |
 | `system-cleanup` | **P1** | 整合清理流程 |
+| `TUI` | **P1** | 可视化终端界面（交互式） |
 
 ## 快速开始
 
@@ -38,6 +39,9 @@ python3 scripts/lobster_doctor.py session
 
 # 安全清理
 python3 scripts/lobster_doctor.py cleanup --undo  # 撤销
+
+# 🖥️ 可视化界面（TUI）
+python3 scripts/lobster_tui.py
 ```
 
 ## 相对阈值设计
@@ -72,6 +76,9 @@ python3 scripts/lobster_doctor.py cleanup --undo  # 撤销
 | "技能瘦身" | 精简技能 description |
 | "帮我清理一下" | 安全清理废弃文件 |
 | "系统体检" | 运行系统健康诊断 |
+| "打开可视化界面" / "TUI" | 提示用户去终端运行 lobster_tui.py |
+
+**注意**：TUI 是交互式终端界面，需要在本地终端运行，无法通过消息渠道直接操作。Agent 会告诉用户具体命令。
 
 **Agent 主动触发**：每周定期执行健康检查，发现问题推送到飞书。
 
