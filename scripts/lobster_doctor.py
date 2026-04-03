@@ -34,13 +34,62 @@ import argparse
 from pathlib import Path
 from datetime import datetime, timedelta
 
-# 导入公共模块
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "common"))
-from utils import (
-    load_json, save_json, file_hash, file_age_days,
-    estimate_tokens, fmt_tokens, fmt_size,
-    WORKSPACE, OPENCLAW_CONFIG
-)
+# === 内联公共模块（解决单独 clone 缺依赖问题）===
+# 路径常量
+WORKSPACE = Path(os.environ.get("OPENCLAW_WORKSPACE", Path.home() / ".openclaw" / "workspace"))
+OPENCLAW_CONFIG = Path.home() / ".openclaw" / "openclaw.json"
+
+# 文件工具
+def load_json(path, default=None):
+    """安全加载 JSON 文件"""
+    p = Path(path)
+    if not p.exists():
+        return default
+    try:
+        return json.loads(p.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as e:
+        print(f"⚠️ JSON 解析失败: {p} - {e}")
+        return default
+
+def save_json(path, data):
+    """保存 JSON 文件"""
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
+
+def file_hash(filepath):
+    """计算文件 MD5"""
+    return hashlib.md5(Path(filepath).read_bytes()).hexdigest()
+
+def file_age_days(filepath):
+    """文件年龄（天）"""
+    mtime = os.path.getmtime(filepath)
+    age = datetime.now() - datetime.fromtimestamp(mtime)
+    return age.days
+
+# Token 工具
+def estimate_tokens(text):
+    """估算 token 数"""
+    return len(text) // 4
+
+def fmt_tokens(n):
+    """格式化 token 数"""
+    if n >= 1_000_000:
+        return f"{n/1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n/1_000:.0f}K"
+    return str(n)
+
+def fmt_size(size_bytes):
+    """格式化文件大小"""
+    if size_bytes >= 1024*1024*1024:
+        return f"{size_bytes/(1024*1024*1024):.1f}GB"
+    if size_bytes >= 1024*1024:
+        return f"{size_bytes/(1024*1024):.1f}MB"
+    if size_bytes >= 1024:
+        return f"{size_bytes/1024:.1f}KB"
+    return f"{size_bytes}B"
+# === 内联结束 ===
 
 # ==================== 路径配置 ====================
 CRON_JOBS = Path.home() / ".openclaw" / "cron" / "jobs.json"
