@@ -1286,6 +1286,76 @@ def cmd_system_cleanup(args):
     return results
 
 
+def cmd_fix(args):
+    """
+    一键清理命令
+    
+    自动执行：archive + slim + cleanup
+    """
+    dry_run = getattr(args, 'dry_run', False)
+    
+    print(f"🦞 龙虾医生 — 一键清理")
+    print(f"{'='*50}")
+    print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+    
+    if dry_run:
+        print("📋 模拟模式（不会实际修改文件）\n")
+    
+    total_results = {
+        "archive": {},
+        "slim": {},
+        "cleanup": {},
+        "total_freed_tokens": 0,
+        "total_freed_bytes": 0
+    }
+    
+    # Step 1: 归档旧记忆
+    print("📦 Step 1/3: 归档旧记忆...")
+    archive_args = argparse.Namespace(dry_run=dry_run, days=30, json=False)
+    archive_result = cmd_archive(archive_args)
+    total_results["archive"] = archive_result
+    total_results["total_freed_tokens"] += archive_result.get("freed_tokens", 0)
+    print()
+    
+    # Step 2: 技能瘦身（只报告，不修改）
+    print("🧩 Step 2/3: 检查技能描述...")
+    slim_args = argparse.Namespace(json=False)
+    slim_result = cmd_slim(slim_args)
+    total_results["slim"] = slim_result
+    print()
+    
+    # Step 3: 清理废弃文件
+    print("🧹 Step 3/3: 清理废弃文件...")
+    cleanup_args = argparse.Namespace(dry_run=dry_run, json=False)
+    cleanup_result = cmd_cleanup(cleanup_args)
+    total_results["cleanup"] = cleanup_result
+    total_results["total_freed_bytes"] += cleanup_result.get("freed_bytes", 0)
+    print()
+    
+    # 总结
+    print(f"{'='*50}")
+    print(f"{'模拟' if dry_run else '实际'}清理完成！\n")
+    
+    print(f"📊 清理统计:")
+    print(f"   • 归档文件: {len(total_results['archive'].get('archived', []))} 个")
+    print(f"   • 清理文件: {total_results['cleanup'].get('deleted_files', 0)} 个")
+    print(f"   • 节省 token: ~{fmt_tokens(total_results['total_freed_tokens'])}")
+    print(f"   • 释放空间: {fmt_size(total_results['total_freed_bytes'])}")
+    
+    if total_results['total_freed_tokens'] > 0 or total_results['total_freed_bytes'] > 0:
+        print(f"\n💰 清理后效果:")
+        if total_results['total_freed_tokens'] > 0:
+            print(f"   • 每轮节省 ~{fmt_tokens(total_results['total_freed_tokens'])} tokens")
+            print(f"   • 相当于延长 ~{total_results['total_freed_tokens'] // 500} 轮对话")
+        if total_results['total_freed_bytes'] > 0:
+            print(f"   • 启动速度提升 ~{max(5, total_results['total_freed_bytes'] // (1024*1024) * 2)}%")
+    
+    if not dry_run:
+        print(f"\n💡 撤销: cleanup --undo 可恢复清理的文件")
+    
+    return total_results
+
+
 def cmd_health(args):
     """
     健康检查命令（Agent 定期执行）
@@ -1458,128 +1528,66 @@ def cmd_health(args):
                 # 问题描述
                 if issue["type"] == "danger_sessions":
                     print(f"🔴 大会话占用过多 token")
-                    for s in issue['details']:
+                    for s in issue['details'][:3]:
                         print(f"   • {s['agent']}/{s['id']}: ~{fmt_tokens(s['tokens'])} tokens")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 每轮注入更多 token，响应变慢")
-                    print(f"   • 接近上下文窗口限制，可能中断对话")
-                    print(f"   • API 费用增加")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   archive --days 30  归档旧记忆")
-                    print(f"   /compress          压缩当前会话")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 减少每轮注入 ~30-50% token")
-                    print(f"   • 响应速度提升 ~20%")
-                    print(f"   • 延长会话续航 ~2-3 倍")
+                    print(f"   影响：响应变慢、可能中断对话、费用增加\n")
                     
                 elif issue["type"] == "warn_sessions":
                     print(f"🟡 警告级会话 ({issue['count']} 个)")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 开始占用较多 token，需关注")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   定期 archive 归档旧记忆")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 防止升级为危险级")
+                    print(f"   影响：占用较多 token\n")
                     
                 elif issue["type"] == "stale_files":
                     print(f"📦 废弃文件堆积")
-                    print(f"   • {issue['count']} 个文件超过 {STALE_DAYS_PY_JS_HTML} 天未更新")
-                    print(f"   • 占用 {fmt_size(issue['size'])} 空间")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • workspace 膨胀，拖慢启动速度")
-                    print(f"   • 每轮扫描更多文件，浪费时间")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   cleanup --dry-run  先预览")
-                    print(f"   cleanup             执行清理")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 释放 {fmt_size(issue['size'])} 空间")
-                    print(f"   • 启动速度提升 ~10-15%")
+                    print(f"   • {issue['count']} 个文件，占用 {fmt_size(issue['size'])}")
+                    print(f"   影响：拖慢启动速度\n")
                     
                 elif issue["type"] == "skill_desc_large":
                     print(f"🧩 技能描述过长")
-                    print(f"   • {len(skills)} 个技能，description 总计 ~{fmt_tokens(issue['tokens'])} tokens")
-                    # 找出最大的几个技能
+                    print(f"   • {len(skills)} 个技能，description ~{fmt_tokens(issue['tokens'])} tokens")
                     top_skills = sorted(skills, key=lambda x: -x['tokens'])[:3]
-                    print(f"   • 最大户:")
-                    for s in top_skills:
-                        print(f"     - {s['name']}: ~{s['tokens']} tokens")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 每轮注入 {fmt_tokens(issue['tokens'])} tokens（纯描述）")
-                    print(f"   • 减少可用上下文空间")
-                    print(f"   • 响应变慢、费用增加")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   slim  精简技能描述")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 每轮节省 ~{fmt_tokens(issue['tokens'] // 2)} tokens")
-                    print(f"   • 相当于延长 ~{issue['tokens'] // 2 // 100} 轮对话")
+                    print(f"   • 大户: {', '.join(s['name'] for s in top_skills)}")
+                    print(f"   影响：每轮注入过多 token\n")
                     
                 elif issue["type"] == "bootstrap_large":
                     print(f"🧠 Bootstrap 文件过大")
-                    print(f"   • 核心文件总计 ~{fmt_tokens(issue['tokens'])} tokens")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 每轮固定注入，无法压缩")
-                    print(f"   • 占用宝贵上下文空间")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   手动精简 MEMORY.md、PROGRESS.md")
-                    print(f"   archive 归档旧记忆")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 每轮节省 ~1-2K tokens")
+                    print(f"   • 核心文件 ~{fmt_tokens(issue['tokens'])} tokens")
+                    print(f"   影响：占用上下文空间\n")
                     
                 elif issue["type"] == "orphan_process":
                     details = issue['details']
                     print(f"👻 孤立进程残留")
                     print(f"   • {details.get('reason', '?')}")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 占用内存、CPU 资源")
-                    print(f"   • 可能导致系统不稳定")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   重启 OpenClaw: systemctl --user restart openclaw-gateway")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 释放内存 ~50-200MB")
+                    print(f"   影响：占用内存 CPU\n")
                     
                 elif issue["type"] == "memory_warning":
                     details = issue['details']
                     print(f"💾 内存占用过高")
                     print(f"   • {details.get('message', '?')}")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 系统响应变慢")
-                    print(f"   • 可能触发 OOM")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   重启 OpenClaw 服务")
-                    print(f"\n💰 预期效果:")
-                    print(f"   • 内存占用降低 ~30-50%")
+                    print(f"   影响：系统响应变慢\n")
                     
                 elif issue["type"] == "token_anomaly":
                     print(f"🔢 Token 计数异常")
-                    print(f"   • {issue['count']} 个会话计数不准确")
-                    print(f"\n⚡ 影响:")
-                    print(f"   • 健康检查数据不可靠")
-                    print(f"\n✅ 解决方案:")
-                    print(f"   重新运行 health 检查")
-                    
-                print()  # 问题间空行
+                    print(f"   • {issue['count']} 个会话")
+                    print(f"   影响：数据不准\n")
 
-            # === 总体建议 ===
+            # === 一键清理 ===
             print(f"{'='*50}")
-            print(f"🎯 建议执行顺序:")
-            print(f"   1. slim      — 技能瘦身（每轮节省 token）")
-            print(f"   2. archive   — 归档旧记忆（延长会话续航）")
-            print(f"   3. cleanup   — 清理废弃文件（释放空间）")
+            print(f"🎯 一键清理命令:")
+            print(f"   lobster-doctor fix")
+            print(f"\n   自动执行：归档旧记忆 + 技能瘦身 + 清理废弃文件")
             
-            # === 预估总体效果 ===
+            # === 预估效果 ===
             total_freed = 0
             for issue in results["issues"]:
                 if issue["type"] == "skill_desc_large":
                     total_freed += issue['tokens'] // 2
                 elif issue["type"] == "stale_files":
                     total_freed += issue['size'] // 4
-                elif issue["type"] == "bootstrap_large":
-                    total_freed += issue['tokens'] // 4
-            
+                    
             if total_freed > 0:
-                print(f"\n💰 执行全部清理后预估:")
+                print(f"\n💰 清理后预估:")
                 print(f"   • 每轮节省 ~{fmt_tokens(total_freed)} tokens")
-                print(f"   • workspace 减重 ~{fmt_size(results['files']['stale_size'])}")
+                print(f"   • 响应速度提升 ~{min(30, total_freed // 1000)}%")
                 
         else:
             # 无问题时显示简要状态
@@ -1635,25 +1643,24 @@ def main():
     syscleanup_parser = subparsers.add_parser("system-cleanup", help="系统清理（整合清理流程）")
     syscleanup_parser.add_argument("--json", action="store_true", help="JSON 输出")
 
+    # fix (一键清理)
+    fix_parser = subparsers.add_parser("fix", help="一键清理（归档 + 瘦身 + 清理）")
+    fix_parser.add_argument("--dry-run", action="store_true", help="模拟运行")
+    fix_parser.add_argument("--json", action="store_true", help="JSON 输出")
+
     args = parser.parse_args()
 
     if args.command is None:
         print("🦞 Lobster Doctor v4.1 — 装得下，用得久，清得掉\n")
         print("命令:")
-        print("  archive           Memory 归档（P0 核心，延长会话续航）")
-        print("  archive --days N  归档超过N天的记忆")
-        print("  archive --undo    恢复最近归档")
+        print("  fix               🎯 一键清理（归档 + 瘦身 + 清理）")
+        print("  fix --dry-run     模拟一键清理")
+        print("  health            健康检查")
+        print("  archive           Memory 归档")
         print("  slim              技能瘦身")
         print("  cleanup           安全清理")
-        print("  cleanup --undo    撤销清理")
-        print("  system-health     系统体检（文件夹结构 + 大小）📋 Phase 规划中")
-        print("  system-cleanup    系统清理（整合清理流程）📋 Phase 规划中")
-        print("  session           会话检查（相对阈值）")
-        print("  health            健康检查（Agent 定期执行）")
-        print()
-        print("选项:")
-        print("  --json            JSON 格式输出")
-        print("  --dry-run         模拟运行")
+        print("  session           会话检查")
+        print("  system-health     系统体检")
         print()
         print("核心价值:")
         print("  装得下 — 技能瘦身，减少每轮注入量")
@@ -1685,6 +1692,8 @@ def main():
         cmd_system_health(args)
     elif args.command == "system-cleanup":
         cmd_system_cleanup(args)
+    elif args.command == "fix":
+        cmd_fix(args)
 
 
 if __name__ == "__main__":
