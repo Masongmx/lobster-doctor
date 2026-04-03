@@ -1,0 +1,21 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  standalone-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Test standalone execution
+        run: |
+          # 模拟用户单独 clone 后的场景
+          python3 scripts/lobster_doctor.py
+          python3 scripts/lobster_doctor.py session
+          python3 scripts/lobster_doctor.py slim
