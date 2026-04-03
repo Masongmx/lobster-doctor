@@ -43,14 +43,13 @@ git clone https://github.com/Masongmx/openclaw.git lobster-doctor
 ## 🚀 Quick Start
 
 ```bash
-# Health check (say: "check my health")
+# From anywhere - find and run
+SKILL_DIR=$(find ~/.openclaw ~/.npm-global -name "lobster-doctor" -type d 2>/dev/null | head -1)
+python3 "$SKILL_DIR/scripts/lobster_doctor.py" health
+
+# Or cd to skill directory first
+cd ~/.openclaw/workspace/skills/lobster-doctor
 python3 scripts/lobster_doctor.py health
-
-# Archive old memories (say: "archive old memories")
-python3 scripts/lobster_doctor.py archive
-
-# Check token usage (say: "how's my token usage")
-python3 scripts/lobster_doctor.py session
 ```
 
 ---
@@ -62,9 +61,18 @@ python3 scripts/lobster_doctor.py session
 **New!** Visual workspace health monitor with real-time status display.
 
 ```bash
-# Launch the TUI
+# Find skill location and launch TUI
+SKILL_DIR=$(find ~/.openclaw ~/.npm-global -name "lobster-doctor" -type d 2>/dev/null | head -1)
+python3 "$SKILL_DIR/scripts/lobster_tui.py"
+
+# Or if you know the location:
+cd ~/.openclaw/workspace/skills/lobster-doctor
 python3 scripts/lobster_tui.py
 ```
+
+**Skill may be installed at**:
+- User skill: `~/.openclaw/workspace/skills/lobster-doctor`
+- System skill: `~/.npm-global/lib/node_modules/openclaw/skills/lobster-doctor`
 
 **Interface Overview**:
 ```

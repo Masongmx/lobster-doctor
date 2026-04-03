@@ -28,20 +28,25 @@ OpenClaw 的 workspace 健康管家。监控会话健康、检测孤立进程、
 ## 快速开始
 
 ```bash
-# 健康检查
+# 从任意位置运行（自动查找技能目录）
+SKILL_DIR=$(find ~/.openclaw ~/.npm-global -name "lobster-doctor" -type d 2>/dev/null | head -1)
+python3 "$SKILL_DIR/scripts/lobster_doctor.py" health
+
+# 或者 cd 到技能目录后运行
+cd ~/.openclaw/workspace/skills/lobster-doctor
 python3 scripts/lobster_doctor.py health
+```
 
-# 归档旧记忆（默认 30 天）
-python3 scripts/lobster_doctor.py archive
+**技能可能安装位置**：
+- 用户技能：`~/.openclaw/workspace/skills/lobster-doctor`
+- 系统技能：`~/.npm-global/lib/node_modules/openclaw/skills/lobster-doctor`
 
-# 检查 token 用量
-python3 scripts/lobster_doctor.py session
+## 🖥️ TUI 可视化界面
 
-# 安全清理
-python3 scripts/lobster_doctor.py cleanup --undo  # 撤销
-
-# 🖥️ 可视化界面（TUI）
-python3 scripts/lobster_tui.py
+```bash
+# 自动查找并启动 TUI
+SKILL_DIR=$(find ~/.openclaw ~/.npm-global -name "lobster-doctor" -type d 2>/dev/null | head -1)
+python3 "$SKILL_DIR/scripts/lobster_tui.py"
 ```
 
 ## 相对阈值设计
