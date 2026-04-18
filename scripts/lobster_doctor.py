@@ -25,6 +25,7 @@ v4.1 变更：
 """
 
 import json
+import logging
 import os
 import hashlib
 import sys
@@ -640,8 +641,7 @@ def get_all_sessions():
                     'mtime': datetime.fromtimestamp(f.stat().st_mtime),
                 })
             except Exception as e:
-                # 会话文件可能正在写入，跳过并记录
-                continue
+                logging.warning(f"跳过会话文件（可能正在写入）: {f} - {e}")
 
     return sessions
 
@@ -733,7 +733,7 @@ def scan_skills():
                 fm_match = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
                 if fm_match:
                     fm = fm_match.group(1)
-                    desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
+                    desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-zA-Z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
                     if desc_match:
                         desc = desc_match.group(1)
                         desc = re.sub(r'^\s*>\s*', '', desc, flags=re.MULTILINE).strip()

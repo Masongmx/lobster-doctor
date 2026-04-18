@@ -46,7 +46,7 @@ def parse_frontmatter(content):
     rest = content[fm_match.end():]
 
     name_match = re.search(r'^name:\s*(.+)$', fm, re.MULTILINE)
-    desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
+    desc_match = re.search(r'^description:\s*(.+?)(?=\n^[a-zA-Z]|\n---|\Z)', fm, re.MULTILINE | re.DOTALL)
 
     name = name_match.group(1).strip().strip('"\'') if name_match else None
     raw_desc = desc_match.group(1) if desc_match else None
@@ -54,90 +54,88 @@ def parse_frontmatter(content):
     return name, raw_desc, rest
 
 
-def clean_description(raw_desc):
-    """精简 description，保留关键信息，去除冗余
+def _normalize_text(raw_text: str) -> str:
+    """基础文本清理：去 YAML 前缀、引号、多余空格"""
+    text = re.sub(r'^\s*>\s*', '', raw_text, flags=re.MULTILINE).strip()
+    text = text.strip('"\'')
+    text = re.sub(r'\n\s*', ' ', text).strip()
+    text = re.sub(r'\s+', ' ', text)
+    return text
 
-    优先级：核心功能句 > 触发关键词 > 排除条件 > 示例
-    """
-    # 去掉 YAML 多行前缀
-    desc = re.sub(r'^\s*>\s*', '', raw_desc, flags=re.MULTILINE).strip()
-    # 去掉引号包裹
-    desc = desc.strip('"\'')
-    # 合并多行为单行
-    desc = re.sub(r'\n\s*', ' ', desc).strip()
-    # 去掉多余空格
-    desc = re.sub(r'\s+', ' ', desc)
 
-    # 🆕 去除重复片段（检测连续重复的句子/短语）
-    # 方法：用滑动窗口检测重复的连续序列
-    words = desc.split()
-    if len(words) >= 6:  # 降低阈值，支持短句
-        # 尝试不同长度的窗口
-        for window_size in range(min(20, len(words)//2), 4, -1):  # 改为 4，确保包含 5
-            i = 0
-            while i < len(words) - window_size * 2:
-                # 归一化窗口内容（忽略标点）
-                window = ' '.join(words[i:i+window_size]).lower()
-                window_norm = re.sub(r'[^\w\s]', '', window)
-                # 检查后面是否有相同的窗口
-                for j in range(i + window_size, len(words) - window_size + 1):
-                    candidate = ' '.join(words[j:j+window_size]).lower()
-                    candidate_norm = re.sub(r'[^\w\s]', '', candidate)
-                    if window_norm == candidate_norm:
-                        # 发现重复，删除后面的重复部分
-                        words = words[:j] + words[j+window_size:]
-                        break
-                i += 1
-            if len(words) < len(desc.split()):
-                break
-        desc = ' '.join(words)
-
-    # 🆕 清理相邻的重复单词（忽略标点）
-    words = desc.split()
-    cleaned_words = []
-    prev_word = None
+def _remove_duplicate_words(text: str) -> str:
+    """清理相邻的重复单词（忽略标点）"""
+    words = text.split()
+    cleaned = []
+    prev_norm = ''
     for w in words:
         w_norm = re.sub(r'[^\w]', '', w.lower())
-        prev_norm = re.sub(r'[^\w]', '', (prev_word or '').lower())
         if w_norm != prev_norm:
-            cleaned_words.append(w)
-        prev_word = w
-    desc = ' '.join(cleaned_words)
+            cleaned.append(w)
+        prev_norm = w_norm
+    return ' '.join(cleaned)
 
-    # 🆕 如果去重后的描述已经足够短，直接返回
-    if len(desc) <= 150:
-        return desc
 
-    result_parts = []
+def _remove_duplicate_phrases(text: str) -> str:
+    """用滑动窗口检测并去除连续重复的短语"""
+    words = text.split()
+    if len(words) < 6:
+        return text
 
-    # 1. 提取核心功能句（第一句话，包含关键动词/名词）
-    # 匹配模式：以大写字母开头，到第一个句号+空格结束（排除 URL 中的点）
-    first_sentence_match = re.match(r'([A-Z][^.]*\.[a-z][^.]*\.(?:\s|$))', desc)
-    if not first_sentence_match:
-        # 尝试匹配到 ". " 处的第一个合理断句（至少15字符）
-        first_sentence_match = re.match(r'(.{15,}?\.\s)', desc)
-    if not first_sentence_match:
-        # 备选：到 ". Use" / ". NOT" / ". Also" 等模式处截断
-        first_sentence_match = re.match(r'(.+?\.)\s+(?:Use|NOT|Also|When|Supports?|Activ)', desc)
-    core_sentence = first_sentence_match.group(1).strip().rstrip('.') if first_sentence_match else ''
+    for window_size in range(min(20, len(words) // 2), 4, -1):
+        i = 0
+        while i < len(words) - window_size * 2:
+            window = ' '.join(words[i:i + window_size]).lower()
+            window_norm = re.sub(r'[^\w\s]', '', window)
+            for j in range(i + window_size, len(words) - window_size + 1):
+                candidate = ' '.join(words[j:j + window_size]).lower()
+                candidate_norm = re.sub(r'[^\w\s]', '', candidate)
+                if window_norm == candidate_norm:
+                    words = words[:j] + words[j + window_size:]
+                    break
+            i += 1
+        if len(words) < len(text.split()):
+            break
+    return ' '.join(words)
 
-    # 2. 保留 "Activate when user mentions:" 关键词
-    activate_match = re.search(r'Activate when user mentions?:\s*(.+?)(?:\.\s*$|\.\s*[A-Z])', desc)
+
+def extract_core_sentence(text: str) -> str:
+    """提取核心功能句（第一句话，包含关键动词/名词）"""
+    # 模式1：以大写字母开头，到第一个句号+空格结束（排除 URL 中的点）
+    match = re.match(r'([A-Z][^.]*\.[a-z][^.]*\.(?:\s|$))', text)
+    if not match:
+        # 模式2：到 ". " 处的第一个合理断句（至少15字符）
+        match = re.match(r'(.{15,}?\.\s)', text)
+    if not match:
+        # 模式3：到 ". Use" / ". NOT" / ". Also" 等模式处截断
+        match = re.match(r'(.+?\.)\s+(?:Use|NOT|Also|When|Supports?|Activ)', text)
+    return match.group(1).strip().rstrip('.') if match else ''
+
+
+def extract_keywords(text: str) -> tuple[str, str, str]:
+    """提取关键词：activate 短语、triggers、NOT for 条件
+
+    Returns:
+        (activate_keywords, triggers, not_for)
+    """
+    # Activate when user mentions
+    activate_match = re.search(
+        r'Activate when user mentions?:\s*(.+?)(?:\.\s*$|\.\s*[A-Z])', text
+    )
     activate_keywords = activate_match.group(1).strip().rstrip('.') if activate_match else ''
 
-    # 3. 保留 "Triggers:" / "Trigger phrases:" 关键词
-    triggers_match = re.search(r'Trigger(?:s)? phrases?:\s*"(.+?)"', desc)
+    # Triggers
+    triggers_match = re.search(r'Trigger(?:s)? phrases?:\s*"(.+?)"', text)
     if not triggers_match:
-        triggers_match = re.search(r'Trigger(?:s)?:\s*"(.+?)"', desc)
+        triggers_match = re.search(r'Trigger(?:s)?:\s*"(.+?)"', text)
     triggers = triggers_match.group(1).strip() if triggers_match else ''
 
-    # 4. 保留 "NOT for:" 排除条件（但只保留精简版，不超过100字符）
-    not_for_match = re.search(r'NOT for:\s*(.+?)(?:\.\s|$)', desc)
+    # NOT for
     not_for = ''
+    not_for_match = re.search(r'NOT for:\s*(.+?)(?:\.\s|$)', text)
     if not_for_match:
         not_for_raw = not_for_match.group(1).strip().rstrip('.')
         if len(not_for_raw) > 100:
-            # 只保留前3个排除项
             items = re.split(r',\s*(?:or|and)\s*', not_for_raw)
             not_for = 'NOT for: ' + ', '.join(items[:3])
             if len(items) > 3:
@@ -145,7 +143,42 @@ def clean_description(raw_desc):
         else:
             not_for = f'NOT for: {not_for_raw}'
 
+    return activate_keywords, triggers, not_for
+
+
+def truncate_text(text: str, max_len: int = 150) -> str:
+    """硬限制文本长度，在句号处截断避免句子不完整"""
+    if len(text) <= max_len:
+        return text
+
+    truncated = text[:max_len - 3]
+    last_period = max(
+        truncated.rfind('.'),
+        truncated.rfind('。'),
+        truncated.rfind('：'),
+    )
+    if last_period > 50:
+        return text[:last_period + 1]
+    return truncated + "..."
+
+
+def clean_description(raw_desc: str) -> str:
+    """精简 description，保留关键信息，去除冗余
+
+    优先级：核心功能句 > 触发关键词 > 排除条件 > 示例
+    """
+    desc = _normalize_text(raw_desc)
+    desc = _remove_duplicate_phrases(desc)
+    desc = _remove_duplicate_words(desc)
+
+    if len(desc) <= 150:
+        return desc
+
+    core_sentence = extract_core_sentence(desc)
+    activate_keywords, triggers, not_for = extract_keywords(desc)
+
     # 组装
+    result_parts = []
     if core_sentence and len(core_sentence) > 15:
         result_parts.append(core_sentence)
     if activate_keywords:
@@ -153,13 +186,15 @@ def clean_description(raw_desc):
     if triggers and not activate_keywords:
         result_parts.append(triggers)
 
-    # 如果核心句子和关键词都不够，用 Use when
+    # 兜底：Use when
     if not result_parts:
-        use_when_match = re.search(r'(?:Activates?|Use) when (?:the )?user mentions?:\s*(.+?)(?:\.\s|$)', desc)
+        use_when_match = re.search(
+            r'(?:Activates?|Use) when (?:the )?user mentions?:\s*(.+?)(?:\.\s|$)', desc
+        )
         if use_when_match:
             result_parts.append(use_when_match.group(1).strip().rstrip('.'))
 
-    # NOT for 放最后（作为补充而非主体）
+    # NOT for 放最后
     if not_for:
         result_parts.append(not_for)
 
@@ -171,22 +206,7 @@ def clean_description(raw_desc):
         result_parts.append(fallback)
 
     slim = " ".join(result_parts)
-
-    # 硬限制：不超过 150 字符
-    if len(slim) > 150:
-        # 优先保留核心句 + NOT for，砍掉触发关键词
-        if core_sentence and len(core_sentence) > 15:
-            slim = core_sentence + ('. ' + not_for if not_for else '')
-        if len(slim) > 150:
-            # 在句号处截断，避免句子不完整
-            truncated = slim[:147]
-            last_period = max(truncated.rfind('.'), truncated.rfind('。'), truncated.rfind('：'))
-            if last_period > 50:  # 确保至少保留有意义的内容
-                slim = slim[:last_period + 1]
-            else:
-                slim = truncated + "..."
-
-    return slim
+    return truncate_text(slim, 150)
 
 
 def scan_all_skills():
