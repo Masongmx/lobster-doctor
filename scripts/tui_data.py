@@ -35,25 +35,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Workspace 路径
-WORKSPACE = Path.home() / ".openclaw" / "workspace"
+# 从 config 导入共享常量
+from config import WORKSPACE, PROTECTED_DIRS, CORE_FILES
 
 # 健康状态阈值 (bytes)
 HEALTH_THRESHOLDS = {
     "ok": 500 * 1024 * 1024,      # 500MB
     "warn": 1024 * 1024 * 1024,   # 1GB
-}
-
-# 受保护目录（不计入统计）
-PROTECTED_DIRS = {"skills", "node_modules", ".git", "memory-tree", "memory"}
-
-# 核心文件白名单
-CORE_FILES = {
-    "AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md",
-    "HEARTBEAT.md", "IDENTITY.md", "PROGRESS.md", "INTEL-DIRECTIVE.md",
-    "BOOTSTRAP.md", "KB-SYNC-GUIDE.md", "package.json", "package-lock.json",
-    ".env", ".openclaw", ".git", ".gitignore",
-    ".model_override", ".openclaw-model-override",
 }
 
 # 缓存配置：TTL=5秒（与 TUI 刷新间隔一致）

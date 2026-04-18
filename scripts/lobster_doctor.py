@@ -34,10 +34,10 @@ import argparse
 from pathlib import Path
 from datetime import datetime, timedelta
 
+# === 导入配置 ===
+from config import WORKSPACE, OPENCLAW_CONFIG, PROTECTED_DIRS, CORE_FILES, AI_TOOLS
+
 # === 内联公共模块（解决单独 clone 缺依赖问题）===
-# 路径常量
-WORKSPACE = Path(os.environ.get("OPENCLAW_WORKSPACE", Path.home() / ".openclaw" / "workspace"))
-OPENCLAW_CONFIG = Path.home() / ".openclaw" / "openclaw.json"
 
 # 文件工具
 def load_json(path, default=None):
@@ -125,18 +125,6 @@ THRESHOLD_PERCENTAGES = {
 # 会话健康阈值（绝对值，用于兼容旧代码）
 SESSION_WARN_THRESHOLD = 100_000   # 100K tokens 告警
 SESSION_DANGER_THRESHOLD = 200_000 # 200K tokens 强烈告警
-
-# 核心文件白名单（永不删除）
-CORE_FILES = {
-    "AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md",
-    "HEARTBEAT.md", "IDENTITY.md", "PROGRESS.md", "INTEL-DIRECTIVE.md",
-    "BOOTSTRAP.md", "KB-SYNC-GUIDE.md", "package.json", "package-lock.json",
-    ".env", ".openclaw", ".git", ".gitignore",
-    ".model_override", ".openclaw-model-override",
-}
-
-# 受保护目录（不扫描不清理）
-PROTECTED_DIRS = {"skills", "node_modules", ".git", "memory-tree", "memory"}
 
 # 清理规则
 STALE_DAYS_PY_JS_HTML = 3     # .py/.js/.html 超过N天未修改视为废弃
@@ -1085,11 +1073,7 @@ def cmd_system_health(args):
         })
 
     # 检查 AI 工具残留
-    ai_tools = ['.windsurf', '.continue', '.crush', '.goose', '.kiro', '.kilocode', 
-                '.roo', '.qoder', '.trae', '.vibe', '.zencoder', '.openhands',
-                '.pi', '.pochi', '.mux', '.neovate', '.mcpjam', '.junie', '.iflow',
-                '.factory', '.cortex', '.commandcode', '.codebuddy', '.augment', '.adal']
-    for tool in ai_tools:
+    for tool in AI_TOOLS:
         if (WORKSPACE / tool).exists():
             violations.append({
                 "type": "ai_tool_residual",
@@ -1245,11 +1229,7 @@ def cmd_system_cleanup(args):
     print("Phase 3: 深度清理")
 
     # 3.1 删除 AI 工具残留
-    ai_tools = ['.windsurf', '.continue', '.crush', '.goose', '.kiro', '.kilocode', 
-                '.roo', '.qoder', '.trae', '.vibe', '.zencoder', '.openhands',
-                '.pi', '.pochi', '.mux', '.neovate', '.mcpjam', '.junie', '.iflow',
-                '.factory', '.cortex', '.commandcode', '.codebuddy', '.augment', '.adal', '.kode', '.qwen']
-    for tool in ai_tools:
+    for tool in AI_TOOLS:
         d = WORKSPACE / tool
         if d.exists() and d.is_dir():
             shutil.rmtree(d)

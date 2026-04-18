@@ -33,6 +33,7 @@ import time
 import logging
 import psutil
 import os
+import argparse
 from datetime import datetime
 
 from textual.app import App, ComposeResult
@@ -48,6 +49,7 @@ from tui_header import HeaderWidget, Header
 from tui_panels import SessionsPanel, FilesPanel, SkillsPanel, PanelsContainer
 from tui_action_bar import ActionBarWidget, ActionBar, ConfirmDialog
 from tui_data import get_summary, clear_cache, get_cache_info
+from lobster_doctor import cmd_archive, cmd_slim, cmd_cleanup
 
 # 配置 logging
 logger = logging.getLogger(__name__)
@@ -350,27 +352,71 @@ class LobsterDoctorApp(App):
         logger.info("执行 Archive: 归档旧记忆")
         self.status_message = "[yellow]执行 Archive: 归档旧记忆...[/]"
         self._update_status()
-        # TODO: 实际归档逻辑
-        self.status_message = "[green]✓ Archive 完成[/]"
+        # 异步执行，保持 TUI 响应
+        self.call_later(self._run_archive)
+
+    def _run_archive(self) -> None:
+        """异步执行归档"""
+        try:
+            args = argparse.Namespace(dry_run=False, days=30, json=False)
+            result = cmd_archive(args)
+            freed = result.get("freed_tokens", 0)
+            archived = len(result.get("archived", []))
+            self.status_message = f"[green]✓ Archive 完成: 归档 {archived} 个文件，节省 ~{freed//4} tokens[/]"
+        except Exception as e:
+            logger.error(f"Archive 执行失败: {e}")
+            self.status_message = f"[red]✗ Archive 失败: {e}[/]"
         self._update_status()
+        # 刷新面板
+        self._auto_refresh()
 
     def _do_slim(self) -> None:
         """执行瘦身"""
         logger.info("执行 Slim: 技能瘦身")
         self.status_message = "[cyan]执行 Slim: 技能瘦身...[/]"
         self._update_status()
-        # TODO: 实际瘦身逻辑
-        self.status_message = "[green]✓ Slim 完成[/]"
+        # 异步执行，保持 TUI 响应
+        self.call_later(self._run_slim)
+
+    def _run_slim(self) -> None:
+        """异步执行技能瘦身"""
+        try:
+            args = argparse.Namespace(json=False)
+            result = cmd_slim(args)
+            skills_count = result.get("total", 0)
+            suggestions = len(result.get("suggestions", []))
+            self.status_message = f"[green]✓ Slim 完成: {skills_count} 个技能，{suggestions} 个可精简[/]"
+        except Exception as e:
+            logger.error(f"Slim 执行失败: {e}")
+            self.status_message = f"[red]✗ Slim 失败: {e}[/]"
         self._update_status()
+        # 刷新面板
+        self._auto_refresh()
 
     def _do_cleanup(self) -> None:
         """执行清理"""
         logger.info("执行 Cleanup: 安全清理")
         self.status_message = "[red]执行 Cleanup: 安全清理...[/]"
         self._update_status()
-        # TODO: 实际清理逻辑
-        self.status_message = "[green]✓ Cleanup 完成[/]"
+        # 异步执行，保持 TUI 响应
+        self.call_later(self._run_cleanup)
+
+    def _run_cleanup(self) -> None:
+        """异步执行清理"""
+        try:
+            args = argparse.Namespace(dry_run=False, json=False)
+            result = cmd_cleanup(args)
+            deleted = result.get("deleted_files", 0)
+            freed = result.get("freed_bytes", 0)
+            freed_mb = freed // (1024 * 1024) if freed > 0 else freed // 1024
+            unit = "MB" if freed > 1024 * 1024 else "KB"
+            self.status_message = f"[green]✓ Cleanup 完成: 删除 {deleted} 个文件，释放 {freed_mb} {unit}[/]"
+        except Exception as e:
+            logger.error(f"Cleanup 执行失败: {e}")
+            self.status_message = f"[red]✗ Cleanup 失败: {e}[/]"
         self._update_status()
+        # 刷新面板
+        self._auto_refresh()
 
     def _do_health(self) -> None:
         """执行健康检查"""

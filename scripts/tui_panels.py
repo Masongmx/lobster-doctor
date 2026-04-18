@@ -14,6 +14,7 @@
   - 进度条动画
 """
 
+import logging
 from textual.widget import Widget
 from textual.containers import ScrollableContainer, Horizontal
 from textual.reactive import reactive
@@ -22,9 +23,13 @@ from rich.text import Text
 from rich.style import Style
 
 from tui_data import (
-    get_summary, get_hidden_folders, get_large_files, 
+    get_summary, get_hidden_folders, get_large_files,
     get_violations, get_health_status, _fmt_size
 )
+from lobster_doctor import get_all_sessions, scan_skills
+
+# 配置 logging
+logger = logging.getLogger(__name__)
 
 
 class BasePanel(ScrollableContainer):
@@ -95,23 +100,24 @@ class SessionsPanel(BasePanel):
     def _refresh_data(self) -> None:
         """刷新会话数据"""
         try:
-            # 从 tui_data 获取数据（模拟）
-            # 实际应该从 session 管理器获取
-            summary = get_summary()
+            # 从 lobster_doctor 获取真实会话数据
+            sessions = get_all_sessions()
 
-            # 模拟会话数据
-            # TODO: 集成真实 session 管理器
-            self.total_sessions = 3
-            self.active_sessions = 2
-            self.total_tokens = 250000
-            self.max_tokens = 1000000
-            self.token_percentage = (self.total_tokens / self.max_tokens) * 100
+            self.total_sessions = len(sessions)
+            self.active_sessions = len([s for s in sessions if s.get('tokens', 0) > 0])
+            self.total_tokens = sum(s.get('tokens', 0) for s in sessions)
+            self.max_tokens = 1000000  # 1M tokens 默认上限
+            self.token_percentage = (self.total_tokens / self.max_tokens) * 100 if self.max_tokens > 0 else 0
+
+            self.sessions_data = sessions
 
         except Exception as e:
+            logger.warning(f"获取会话数据失败: {e}")
             self.total_sessions = 0
             self.active_sessions = 0
             self.total_tokens = 0
             self.token_percentage = 0.0
+            self.sessions_data = []
 
     def render(self) -> Text:
         """渲染会话面板"""
@@ -257,18 +263,29 @@ class SkillsPanel(BasePanel):
     def _refresh_data(self) -> None:
         """刷新技能数据"""
         try:
-            # 模拟技能数据
-            # TODO: 从 skills 目录读取真实数据
-            self.total_skills = 47
-            self.total_desc_tokens = 150000
-            self.avg_tokens = int(self.total_desc_tokens / max(self.total_skills, 1))
-            self.max_tokens_skill = "deep-research-pro"
+            # 从 lobster_doctor 获取真实技能数据
+            skills = scan_skills()
+
+            self.total_skills = len(skills)
+            self.total_desc_tokens = sum(s.get('tokens', 0) for s in skills)
+            self.avg_tokens = int(self.total_desc_tokens / max(self.total_skills, 1)) if self.total_skills > 0 else 0
+
+            # 找出 token 最多的技能
+            if skills:
+                max_skill = max(skills, key=lambda s: s.get('tokens', 0))
+                self.max_tokens_skill = max_skill.get('name', '')
+            else:
+                self.max_tokens_skill = ""
+
+            self.skills_data = skills
 
         except Exception as e:
+            logger.warning(f"获取技能数据失败: {e}")
             self.total_skills = 0
             self.total_desc_tokens = 0
             self.avg_tokens = 0
             self.max_tokens_skill = ""
+            self.skills_data = []
 
     def render(self) -> Text:
         """渲染技能面板"""

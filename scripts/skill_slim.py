@@ -21,7 +21,7 @@ import re
 import sys
 from pathlib import Path
 
-WORKSPACE = Path.home() / ".openclaw" / "workspace"
+from config import WORKSPACE
 
 # 技能扫描目录（按优先级）
 SKILL_DIRS = [
